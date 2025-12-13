@@ -2,6 +2,10 @@ spring:
   application:
     name: LogStore
 
+  config:
+    import: "optional:file:.env[.properties]"
+
+
 management:
   endpoints:
     web:
