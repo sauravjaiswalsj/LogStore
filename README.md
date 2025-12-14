@@ -105,7 +105,7 @@ Each log entry is stored sequentially in the following format:
 
 ---
 
-## 🌐 REST APIs
+## 🌐 REST APIs [Swagger](http://localhost:8080/swagger-ui.html)
 
 ### Append Record
 
