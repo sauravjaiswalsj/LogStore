@@ -1,5 +1,5 @@
 # A Distributed Append-Only Log Store (Kafka - scratch version)
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sauravjaiswalsj/LogStore)
 ## 📌 Overview
 
 This project is a **simplified Kafka-like distributed append-only log system** built from scratch using **Java 23 and Spring Boot**.
@@ -63,7 +63,8 @@ It demonstrates how **high-throughput, ordered writes** can be achieved by enfor
         │  (Follower)    │ │  (Follower)    │
         └────────────────┘ └────────────────┘
 ```
-
+or
+<img width="829" height="672" alt="Image" src="https://github.com/user-attachments/assets/83f3d6e0-4959-49f0-a342-b02251b983ea" />
 ---
 
 ### Core Architectural Principles
@@ -103,6 +104,13 @@ Each log entry is stored sequentially in the following format:
 * Records are immutable
 * New entries are appended at the end of the file
 
+### Example
+
+0|1734150400123|user-123|CREATE_TASK
+1|1734150400456|user-456|UPDATE_TASK
+
+Records are append-only and written sequentially to disk.
+Offsets are strictly increasing and never reused.
 ---
 
 ## 🌐 REST APIs [Swagger](http://localhost:8080/swagger-ui.html)
