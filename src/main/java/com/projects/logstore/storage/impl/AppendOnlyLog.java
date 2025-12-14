@@ -16,7 +16,7 @@ import java.nio.file.StandardOpenOption;
 import com.projects.logstore.storage.AppendOnlyLogService;
 import org.springframework.stereotype.Service;
 
-
+//ToDo: Remove the spring dependencies to make it pure java
 @Service
 public class AppendOnlyLog implements AppendOnlyLogService {
 
