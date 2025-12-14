@@ -63,7 +63,8 @@ It demonstrates how **high-throughput, ordered writes** can be achieved by enfor
         │  (Follower)    │ │  (Follower)    │
         └────────────────┘ └────────────────┘
 ```
-
+or
+<img width="829" height="672" alt="Image" src="https://github.com/user-attachments/assets/83f3d6e0-4959-49f0-a342-b02251b983ea" />
 ---
 
 ### Core Architectural Principles
