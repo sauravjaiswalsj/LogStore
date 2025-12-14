@@ -39,6 +39,10 @@ It demonstrates how **high-throughput, ordered writes** can be achieved by enfor
 
 ### High-Level Architecture Diagram
 
+<img width="736" height="801" alt="Image" src="https://github.com/user-attachments/assets/e03fa2f8-52dd-4937-9604-18f2e87fd731" />
+
+---### Component Interaction
+
 ```
                         ┌────────────┐
                         │   Client   │
@@ -57,14 +61,12 @@ It demonstrates how **high-throughput, ordered writes** can be achieved by enfor
                 │                  │
         Append-only Log      Append-only Log
         (Sequential I/O)     (Sequential I/O)
-                │                  │
+                │ (gRPC)-high rate │
         ┌───────v────────┐ ┌───────v────────┐
         │ Replica Server │ │ Replica Server │
         │  (Follower)    │ │  (Follower)    │
         └────────────────┘ └────────────────┘
 ```
-or
-<img width="829" height="672" alt="Image" src="https://github.com/user-attachments/assets/83f3d6e0-4959-49f0-a342-b02251b983ea" />
 ---
 
 ### Core Architectural Principles
@@ -218,8 +220,9 @@ mini-log-store/
 * **Java:** OpenJDK 23.0.1
 * **Framework:** Spring Boot
 * **Build Tool:** Apache Maven 3.9.11
-* **I/O:** FileChannel / Buffered Streams
-* **Protocol:** REST (HTTP)
+* **I/O:** FileChannel for sequential disk writes
+* **Networking:** gRPC for inter-node communication
+* **Protocol:** Client -> REST (HTTP) | Leader <-> Followers (gRPC)
 
 ---
 
