@@ -1,5 +1,5 @@
 # A Distributed Append-Only Log Store (Kafka - scratch version)
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sauravjaiswalsj/LogStore)
 ## 📌 Overview
 
 This project is a **simplified Kafka-like distributed append-only log system** built from scratch using **Java 23 and Spring Boot**.
