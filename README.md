@@ -104,6 +104,13 @@ Each log entry is stored sequentially in the following format:
 * Records are immutable
 * New entries are appended at the end of the file
 
+### Example
+
+0|1734150400123|user-123|CREATE_TASK
+1|1734150400456|user-456|UPDATE_TASK
+
+Records are append-only and written sequentially to disk.
+Offsets are strictly increasing and never reused.
 ---
 
 ## 🌐 REST APIs [Swagger](http://localhost:8080/swagger-ui.html)
