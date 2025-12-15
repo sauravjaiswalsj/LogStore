@@ -4,6 +4,7 @@ package com.projects.logstore.controller;
 
 import com.projects.logstore.model.Data;
 import com.projects.logstore.storage.AppendOnlyLogService;
+import com.projects.logstore.storage.impl.AppendOnlyLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,12 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/")
 public class AppendController {
-    @Autowired
-    private AppendOnlyLogService appendOnlyLogService;
 
     @PostMapping("/append")
     public long AppendController(@RequestBody Data data) {
         log.info("{}", data);
-        return appendOnlyLogService.logWriter(data);
+
+        AppendOnlyLog log = new AppendOnlyLog();
+        return log.logWriter(data);
     }
 }
