@@ -65,28 +65,4 @@ public class AppendOnlyLog implements AppendOnlyLogService {
         }
         return -1;
     }
-    private long recoverNextOffset() {
-        Path path = Paths.get(filePath);
-        if (!Files.exists(path)) {
-            log.info("File {} does not exist", filePath);
-            return 0L;
-        }
-
-        try{
-            List<String> lines = Files.readAllLines(path);
-
-            if (lines.isEmpty()) {
-                return 0L;
-            }
-
-            String lastLine = lines.get(lines.size() - 1);
-            String[] parts = lastLine.split("\\|");
-
-            long lastOffSet = Long.parseLong(parts[0]);
-            return lastOffSet + 1;
-        }catch(Exception ex){
-            log.error("Failed to recover next offset: {}", ex.getMessage());
-            return 0L;
-        }
-    }
 }
