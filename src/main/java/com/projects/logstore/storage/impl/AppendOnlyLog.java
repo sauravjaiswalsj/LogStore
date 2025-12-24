@@ -20,7 +20,6 @@ public class AppendOnlyLog implements AppendOnlyLogService {
     public void append(String filePath, byte[] record){
         try{
             Path path = Paths.get(filePath);
-
             if (path.getParent() != null) {
                 Files.createDirectories(path.getParent());
             }

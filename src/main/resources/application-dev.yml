@@ -15,3 +15,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+tablet:
+  base-dir: data/logstore/
+  total-tablets: 10
