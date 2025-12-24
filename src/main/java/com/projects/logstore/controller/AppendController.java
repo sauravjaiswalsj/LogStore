@@ -2,6 +2,7 @@ package com.projects.logstore.controller;
 
 // API exposed by Tablet/TabletServer to append new records efficiently (UUID + payload). Handles sequential writes, returns offset.
 
+import com.projects.logstore.dto.AppendDTO;
 import com.projects.logstore.model.Data;
 import com.projects.logstore.server.TabletServer;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class AppendController {
     }
 
     @PostMapping("/append")
-    public long AppendController(@RequestBody Data data) {
+    public AppendDTO AppendController(@RequestBody Data data) {
         if (data == null){
             throw new IllegalArgumentException("Data cannot be null");
         }
@@ -33,6 +34,6 @@ public class AppendController {
             throw new IllegalArgumentException("Data value cannot be null");
         }
         log.info("{}", data);
-       return  tabletServer.append(data);
+       return tabletServer.append(data);
     }
 }

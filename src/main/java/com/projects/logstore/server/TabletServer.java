@@ -1,5 +1,6 @@
 package com.projects.logstore.server;
 
+import com.projects.logstore.dto.AppendDTO;
 import com.projects.logstore.model.Data;
 import com.projects.logstore.tablet.RegistryTablet;
 import com.projects.logstore.tablet.Tablet;
@@ -14,10 +15,14 @@ public class TabletServer {
     @Autowired
     private RegistryTablet registry;
 
-    public long append(Data data){
+    public AppendDTO append(Data data){
         int tabletId = getTabletRoute(data.getKey());
         Tablet tablet = getTablet(tabletId);
-        return tablet.append(data.getKey(), data.getValue());
+        long offSet = tablet.append(data.getKey(), data.getValue());
+        AppendDTO appendDTO = new AppendDTO();
+        appendDTO.setTabletId(tabletId);
+        appendDTO.setOffset(offSet);
+        return appendDTO;
     }
 
     private Tablet getTablet(int tabletId){
