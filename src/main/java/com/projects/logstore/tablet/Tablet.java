@@ -33,6 +33,7 @@ public class Tablet {
         this.appendOnlyLog = new AppendOnlyLog();
         this.nextOffset = new AtomicLong(recoverNextOffset());
     }
+    
     public ReadDTO read(long offset, int limit){
         Path path = Paths.get(logFilePath);
         ReadDTO readDTO = new ReadDTO();
