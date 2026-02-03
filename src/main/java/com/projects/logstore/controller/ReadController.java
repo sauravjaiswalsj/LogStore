@@ -34,7 +34,7 @@ public class ReadController {
         }
 
         if (limit == null || limit < 0) {
-            limit = 10; // default limit
+            limit = 10;
         }
 
         log.info("Read request for tabletId: {}, startOffset: {}, limit: {}", tabletId, startOffset, limit);
