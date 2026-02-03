@@ -10,7 +10,7 @@ import java.util.HashMap;
 public class RegistryTablet {
     private String baseDir;
     private int totalTablets;
-    private final HashMap<Integer, Tablet> tabletHashMap = new HashMap<>();;
+    private final HashMap<Integer, Tablet> tabletHashMap = new HashMap<>();
     private final TabletProperties tabletProperties;
     public RegistryTablet(TabletProperties tabletProperties) {
         this.tabletProperties = tabletProperties;

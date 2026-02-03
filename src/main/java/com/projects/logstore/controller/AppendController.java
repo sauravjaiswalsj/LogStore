@@ -23,7 +23,7 @@ public class AppendController {
     }
 
     @PostMapping("/append")
-    public AppendDTO AppendController(@RequestBody Data data) {
+    public AppendDTO appendLog(@RequestBody Data data) {
         if (data == null){
             throw new IllegalArgumentException("Data cannot be null");
         }
