@@ -26,7 +26,7 @@ public class Tablet {
         this.logFilePath = logFilePath;
         this.nextOffset = nextOffset;
         this.appendOnlyLog = appendOnlyLog;
-        this.readOnlyLog = new ReadOnlyLog();
+        this.readOnlyLog = readOnlyLog;
     }
 
     public Tablet(int tabletId, String baseDir){

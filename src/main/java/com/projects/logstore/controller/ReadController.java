@@ -19,7 +19,7 @@ public class ReadController {
         this.tabletServer = tabletServer;
     }
     @GetMapping("/read")
-    public ReadDTO ReadController(@RequestParam String tabletId, @RequestParam Long startOffset, @RequestParam(required = false) Integer limit) {
+    public ReadDTO ReadController(@RequestParam Integer tabletId, @RequestParam Long startOffset, @RequestParam(required = false) Integer limit) {
         if (tabletId == null) {
             throw new IllegalArgumentException("Tablet ID cannot be null");
         }
@@ -34,6 +34,6 @@ public class ReadController {
 
         log.info("Read request for tabletId: {}, startOffset: {}, limit: {}", tabletId, startOffset, limit);
 
-        return tabletServer.read(Integer.parseInt(tabletId), startOffset, limit);
+        return tabletServer.read(tabletId, startOffset, limit);
     }
 }

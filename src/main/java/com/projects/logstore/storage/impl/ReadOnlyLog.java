@@ -17,6 +17,7 @@ public class ReadOnlyLog implements ReadOnlyLogService {
 
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyLog.class);
 
+    @Override
     public byte[] read(Path filePath, long offset, int length) {
         try(FileChannel channel = FileChannel.open(
                 filePath,
@@ -37,21 +38,21 @@ public class ReadOnlyLog implements ReadOnlyLogService {
             }
         }
         catch(Exception e){
-            log.error("Erro ao leitura do log: " + e.getMessage());
+            log.error("Error during reading the file: {}", e.getMessage());
         }
         return new byte[0];
     }
 
+    @Override
     public List<LogRecord> readFile(Path filePath, long offset, int length){
         List<LogRecord> logRecords = new ArrayList<>();
-        try{
-            BufferedReader reader = Files.newBufferedReader(filePath, java.nio.charset.StandardCharsets.UTF_8);
+        try (BufferedReader reader = Files.newBufferedReader(filePath, java.nio.charset.StandardCharsets.UTF_8)) {
             String line;
 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\|");
 
-                if (parts.length < 4){
+                if (parts.length < 4) {
                     continue;
                 }
 
@@ -69,9 +70,8 @@ public class ReadOnlyLog implements ReadOnlyLogService {
                     break;
                 }
             }
-            reader.close();
-        }catch (Exception e){
-            log.error("Error: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error: {}", e.getMessage());
         }
         return logRecords;
     }
