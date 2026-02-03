@@ -1,7 +1,5 @@
 package com.projects.logstore.storage.impl;
 
-import com.projects.logstore.model.Data;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
