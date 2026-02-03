@@ -1,6 +1,7 @@
 package com.projects.logstore.server;
 
 import com.projects.logstore.dto.AppendDTO;
+import com.projects.logstore.dto.ReadDTO;
 import com.projects.logstore.model.Data;
 import com.projects.logstore.tablet.RegistryTablet;
 import com.projects.logstore.tablet.Tablet;
@@ -31,5 +32,10 @@ public class TabletServer {
 
     private int getTabletRoute(String key){
         return tabletRouter.route(key);
+    }
+
+    public ReadDTO read(int tabletId, Long startOffset, int limit ){
+        Tablet tablet = getTablet(tabletId);
+        return tablet.read(startOffset, limit);
     }
 }
