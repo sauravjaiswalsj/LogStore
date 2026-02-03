@@ -2,6 +2,8 @@ package com.projects.logstore.controller;
 
 import com.projects.logstore.dto.ReadDTO;
 import com.projects.logstore.server.TabletServer;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +21,11 @@ public class ReadController {
         this.tabletServer = tabletServer;
     }
     @GetMapping("/read")
-    public ReadDTO ReadController(@RequestParam Integer tabletId, @RequestParam Long startOffset, @RequestParam(required = false) Integer limit) {
+    @Tag(name = "Read API to fetch log records from a specific tablet starting from a given offset with an optional limit.")
+    @Parameter(name = "tabletId", description = "The ID of the tablet to read from", required = true)
+    @Parameter(name = "startOffset", description = "The starting offset to read from", required = true)
+    @Parameter(name = "limit", description = "The maximum number of records to read", required = false)
+    public ReadDTO readLog(@RequestParam Integer tabletId, @RequestParam Long startOffset, @RequestParam(required = false) Integer limit) {
         if (tabletId == null) {
             throw new IllegalArgumentException("Tablet ID cannot be null");
         }
@@ -27,9 +33,8 @@ public class ReadController {
             throw new IllegalArgumentException("Start offset cannot be null or negative");
         }
 
-        // TODO: Find a better way to handle default limit
         if (limit == null || limit < 0) {
-            limit = 100; // default limit
+            limit = 10; // default limit
         }
 
         log.info("Read request for tabletId: {}, startOffset: {}, limit: {}", tabletId, startOffset, limit);
