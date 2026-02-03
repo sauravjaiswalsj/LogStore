@@ -38,13 +38,17 @@ public class ReadOnlyLog implements ReadOnlyLogService {
             }
         }
         catch(Exception e){
-            log.error("Error during reading the file: {}", e.getMessage());
+            log.error("Error during reading the file: {} \n {}", e.getMessage(), e.getStackTrace());
         }
         return new byte[0];
     }
 
     @Override
     public List<LogRecord> readFile(Path filePath, long offset, int length){
+        if (length <= 0) {
+            log.warn("Requested non-positive length: {}. Returning empty list.", length);
+            return new ArrayList<>();
+        }
         List<LogRecord> logRecords = new ArrayList<>();
         try (BufferedReader reader = Files.newBufferedReader(filePath, java.nio.charset.StandardCharsets.UTF_8)) {
             String line;
@@ -71,7 +75,7 @@ public class ReadOnlyLog implements ReadOnlyLogService {
                 }
             }
         } catch (Exception e) {
-            log.error("Error: {}", e.getMessage());
+            log.error("Error: {} \n {}", e.getMessage(), e.getStackTrace());
         }
         return logRecords;
     }

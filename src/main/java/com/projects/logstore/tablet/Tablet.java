@@ -1,6 +1,5 @@
 package com.projects.logstore.tablet;
 
-import com.projects.logstore.dto.LogRecord;
 import com.projects.logstore.dto.ReadDTO;
 import com.projects.logstore.storage.impl.AppendOnlyLog;
 import com.projects.logstore.storage.impl.ReadOnlyLog;
@@ -44,7 +43,9 @@ public class Tablet {
 
         try{
             if (!Files.exists(path)) {
-                log.info("File {} does not exist", logFilePath);
+                log.info("File {} does not exist in the system", logFilePath);
+                readDTO.setTabletId(-1);
+                readDTO.setOffset(-1);
                 return readDTO;
             }
 
