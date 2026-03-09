@@ -181,31 +181,64 @@ On startup:
 
 ```
 mini-log-store/
-├── src/main/java/com/example/logstore
-│   ├── api/
-│   │   ├── AppendController.java
-│   │   └── ReadController.java
-│   │
-│   ├── server/
-│   │   ├── TabletServer.java
-│   │   ├── LeaderReplicator.java
-│   │   └── ReplicaReceiver.java
-│   │
-│   ├── tablet/
-│   │   ├── Tablet.java
-│   │   ├── TabletRouter.java
-│   │   └── TabletRegistry.java
-│   │
-│   ├── storage/
-│   │   ├── AppendOnlyLog.java
-│   │   ├── LogSegment.java
-│   │   └── LogReader.java
-│   │
-│   ├── recovery/
-│   │   └── LogReplayService.java
-│   │
-│   └── MiniLogStoreApplication.java
+com.projects.logstore
 │
+├── config
+│   ├── TabletConfig
+│   └── TabletProperties
+│
+├── controller
+│   ├── AppendController
+│   ├── ReadController
+│   └── PingController
+│
+├── dto
+│   ├── AppendDTO
+│   ├── ReadDTO
+│   └── LogRecord
+│
+├── model
+│   └── Data
+│
+├── cluster                 ← NEW
+│   ├── ClusterManager
+│   ├── NodeState
+│   ├── NodeRole
+│   ├── PeerNode
+│   └── TabletReplica
+│
+├── replication             ← NEW
+│   ├── ReplicationManager
+│   ├── ReplicationClient
+│   ├── ReplicationService
+│   ├── ReplicationRequest
+│   └── ReplicationResponse
+│
+├── election                ← NEW (later)
+│   ├── LeaderElectionService
+│   ├── VoteRequest
+│   ├── VoteResponse
+│   └── ElectionTimer
+│
+├── server
+│   ├── TabletServer
+│   ├── ReplicaReceiver
+│   └── LeaderReplication
+│
+├── tablet
+│   ├── Tablet
+│   ├── TabletRouter
+│   └── RegistryTable
+│
+├── storage
+│   ├── impl
+│   │   ├── AppendOnlyLogService
+│   │   └── ReadOnlyLogService
+│
+├── recovery
+│   └── LogReplayService
+│
+└── LogStoreApplication
 ├── src/main/resources/
 │   └── application.yml
 │
