@@ -27,7 +27,8 @@ export function formatDateTime(value: string | number | null): string {
   const date = typeof value === "number" ? new Date(value) : new Date(value);
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
-    timeStyle: "medium"
+    timeStyle: "medium",
+    timeZone: "UTC"
   }).format(date);
 }
 

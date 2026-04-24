@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+target
+out
+log
+logs
+ui/.next
+ui/node_modules
+node_modules
+.DS_Store

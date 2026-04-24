@@ -10,6 +10,7 @@ It demonstrates how **high-throughput, ordered writes** can be achieved by enfor
 > *Ordering is enforced by a single leader per partition. All writes are append-only and sequential, enabling lock-free, high-performance ingestion.*
 
 ---
+<img width="1665" height="910" alt="Image" src="https://github.com/user-attachments/assets/4663fbf6-efb5-4b86-ac07-2d4e36399e37" />
 
 ## 🎯 Goals of the Project
 
@@ -143,6 +144,22 @@ POST /append
 ```http
 GET /read?tabletId=2&offset=1042
 ```
+
+## 🐳 Docker
+
+Run the backend and Next.js UI together:
+
+```bash
+docker compose up --build
+```
+
+Endpoints:
+
+* Backend → `http://localhost:8080`
+* Swagger → `http://localhost:8080/swagger-ui.html`
+* UI → `http://localhost:3000`
+
+The UI talks to the backend through the Compose network using `LOGSTORE_API_BASE_URL=http://backend:8080`.
 
 ---
 
