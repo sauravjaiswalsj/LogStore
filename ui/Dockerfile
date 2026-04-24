@@ -29,4 +29,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["/bin/sh", "-c", "npx next start -H 0.0.0.0 -p ${PORT:-3000}"]

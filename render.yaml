@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: logstore-backend
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "10000"
+    disk:
+      name: logstore-data
+      mountPath: /app/data/logstore
+      sizeGB: 1
+
+  - type: web
+    name: logstore-ui
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./ui/Dockerfile
+    dockerContext: ./ui
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: LOGSTORE_API_HOSTPORT
+        fromService:
+          type: web
+          name: logstore-backend
+          property: hostport

@@ -19,4 +19,4 @@ COPY --from=builder /workspace/data ./data
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/bin/sh", "-c", "java -Dserver.port=${PORT:-8080} -jar /app/app.jar"]

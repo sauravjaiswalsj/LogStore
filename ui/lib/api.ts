@@ -7,7 +7,10 @@ import {
 } from "@/lib/types";
 
 const API_BASE_URL =
-  process.env.LOGSTORE_API_BASE_URL ?? "http://127.0.0.1:8080";
+  process.env.LOGSTORE_API_BASE_URL ??
+  (process.env.LOGSTORE_API_HOSTPORT
+    ? `http://${process.env.LOGSTORE_API_HOSTPORT}`
+    : "http://127.0.0.1:8080");
 
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {

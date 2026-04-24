@@ -161,6 +161,28 @@ Endpoints:
 
 The UI talks to the backend through the Compose network using `LOGSTORE_API_BASE_URL=http://backend:8080`.
 
+## ☁️ Deploy To Render
+
+This repo now includes a Render blueprint at `render.yaml`.
+
+Recommended setup:
+
+* `logstore-backend` as a Docker web service
+* `logstore-ui` as a Docker web service
+* A persistent disk mounted at `/app/data/logstore` for the backend
+
+Deploy steps:
+
+1. Push this repo to GitHub/GitLab.
+2. In Render, choose `New +` → `Blueprint`.
+3. Select the repo and deploy the root `render.yaml`.
+
+Important notes:
+
+* The backend writes local log files, so it should use a persistent disk on Render. Without one, data is lost on redeploy/restart.
+* The included blueprint uses a `starter` plan for the backend because Render persistent disks require a paid service.
+* The UI connects to the backend over Render's private network using a service reference, so you do not need to hardcode the backend public URL.
+
 ---
 
 ## 🔁 Replication Model
