@@ -4,7 +4,9 @@ import com.projects.logstore.config.TabletProperties;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class RegistryTablet {
@@ -31,5 +33,20 @@ public class RegistryTablet {
 
     public Tablet getTabletById(int tabletId) {
         return tabletHashMap.getOrDefault(tabletId, null);
+    }
+
+    public List<Tablet> getAllTablets() {
+        return tabletHashMap.values()
+                .stream()
+                .sorted(Comparator.comparingInt(Tablet::getTabletId))
+                .toList();
+    }
+
+    public int getTotalTablets() {
+        return totalTablets;
+    }
+
+    public String getBaseDir() {
+        return baseDir;
     }
 }
