@@ -34,7 +34,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar__brand">
-          <div className="eyebrow">mission control / logstore</div>
+          <div className="eyebrow">LogStore Console</div>
+          <div className="brand-kicker">Distributed log observability</div>
           <h1 className="brand-title">Distributed Log Console</h1>
           <p className="brand-copy">
             Watch keys route into tablets, inspect offsets, and keep the system
@@ -58,6 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="sidebar__footer">
           <div className="eyebrow">runtime</div>
+          <div className="sidebar__footer-title">Local proxy enabled</div>
           <p className="brand-copy">
             Frontend proxies backend requests through local Next.js route
             handlers, so the UI can evolve without adding browser CORS work.

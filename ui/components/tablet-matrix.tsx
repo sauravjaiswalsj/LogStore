@@ -17,23 +17,25 @@ export function TabletMatrix({ tablets }: { tablets: TabletSummary[] }) {
             <div>
               <div className="tablet-card__label mono">tablet-{tablet.tabletId}</div>
               <div className="tablet-card__meta">
-                last change {formatRelativeTime(tablet.lastModifiedAt)}
+                Updated {formatRelativeTime(tablet.lastModifiedAt)}
               </div>
             </div>
             <StatusPill status={tablet.status} />
           </div>
 
-          <div className="split-line mono">
-            <span>latest offset</span>
-            <strong>{tablet.latestOffset >= 0 ? tablet.latestOffset : "empty"}</strong>
-          </div>
-          <div className="split-line mono">
-            <span>records</span>
-            <strong>{formatNumber(tablet.recordCount)}</strong>
-          </div>
-          <div className="split-line mono">
-            <span>footprint</span>
-            <strong>{formatBytes(tablet.fileSizeBytes)}</strong>
+          <div className="tablet-card__stats mono">
+            <div className="tablet-card__stat">
+              <span>latest offset</span>
+              <strong>{tablet.latestOffset >= 0 ? tablet.latestOffset : "empty"}</strong>
+            </div>
+            <div className="tablet-card__stat">
+              <span>records</span>
+              <strong>{formatNumber(tablet.recordCount)}</strong>
+            </div>
+            <div className="tablet-card__stat">
+              <span>footprint</span>
+              <strong>{formatBytes(tablet.fileSizeBytes)}</strong>
+            </div>
           </div>
         </Link>
       ))}
