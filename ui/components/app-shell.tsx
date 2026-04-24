@@ -29,6 +29,7 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   return (
     <div className="app-shell">
@@ -64,6 +65,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             Frontend proxies backend requests through local Next.js route
             handlers, so the UI can evolve without adding browser CORS work.
           </p>
+          {backendUrl ? (
+            <a
+              className="runtime-link"
+              href={backendUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open backend
+            </a>
+          ) : null}
         </div>
       </aside>
 
