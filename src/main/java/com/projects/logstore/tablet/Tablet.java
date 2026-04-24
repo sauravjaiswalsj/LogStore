@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -68,6 +69,53 @@ public class Tablet {
 
         appendOnlyLog.append(logFilePath, record.getBytes());
         return offset;
+    }
+
+    public int getTabletId() {
+        return tabletId;
+    }
+
+    public String getLogFilePath() {
+        return logFilePath;
+    }
+
+    public boolean logFileExists() {
+        return Files.exists(Paths.get(logFilePath));
+    }
+
+    public long getNextOffset() {
+        return nextOffset.get();
+    }
+
+    public long getLatestOffset() {
+        long next = nextOffset.get();
+        return next == 0 ? -1L : next - 1;
+    }
+
+    public long getRecordCount() {
+        return nextOffset.get();
+    }
+
+    public long getFileSizeBytes() {
+        try {
+            return Files.exists(Paths.get(logFilePath)) ? Files.size(Paths.get(logFilePath)) : 0L;
+        } catch (Exception ex) {
+            log.error("Failed to inspect file size for tablet {}: {}", tabletId, ex.getMessage());
+            return 0L;
+        }
+    }
+
+    public Instant getLastModifiedTime() {
+        try {
+            Path path = Paths.get(logFilePath);
+            if (!Files.exists(path)) {
+                return null;
+            }
+            return Files.getLastModifiedTime(path).toInstant();
+        } catch (Exception ex) {
+            log.error("Failed to inspect last modified time for tablet {}: {}", tabletId, ex.getMessage());
+            return null;
+        }
     }
 
     private long recoverNextOffset() {
