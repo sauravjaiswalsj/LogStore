@@ -1,13 +1,53 @@
-# A Distributed Append-Only Log Store (Kafka - scratch version)
+# LogStore
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sauravjaiswalsj/LogStore)
 ## 📌 Overview
 
-This project is a **simplified Kafka-like distributed append-only log system** built from scratch using **Java 23 and Spring Boot**.
+LogStore is an **experimental append-only log project** with an embedded-first core and a Spring Boot HTTP server on top.
 
-It demonstrates how **high-throughput, ordered writes** can be achieved by enforcing **single-leader writes per partition**, eliminating locks while maintaining correctness, durability, and scalability.
+The current alpha focus is:
 
-> **Core idea:**
-> *Ordering is enforced by a single leader per partition. All writes are append-only and sequential, enabling lock-free, high-performance ingestion.*
+> Embedded first, distributed when needed, simple API always.
+
+This is a portfolio-grade alpha, not production infrastructure and not a Kafka replacement.
+
+## V0.1 Embedded Core Alpha
+
+The first milestone is a plain Java `logstore-core` package that works without Spring:
+
+```java
+import com.projects.logstore.core.AppendResult;
+import com.projects.logstore.core.Durability;
+import com.projects.logstore.core.LogRecord;
+import com.projects.logstore.core.LogStore;
+import com.projects.logstore.core.LogStoreConfig;
+
+import java.nio.file.Path;
+import java.util.List;
+
+LogStore store = LogStore.open(LogStoreConfig.builder()
+    .dataDir(Path.of("./data/logstore"))
+    .partitions(16)
+    .durability(Durability.FSYNC_EVERY_WRITE)
+    .build());
+
+AppendResult result = store.append("orders", "ORD-1", payloadBytes);
+List<LogRecord> records = store.read("orders", 0, 100);
+store.close();
+```
+
+V0.1 includes:
+
+* Plain Java `LogStore.open(...)`, `append(...)`, and `read(...)`
+* Per-tablet offset ownership so appends do not reuse offsets
+* Binary framed record encoding with magic, version, length, key/value lengths, and CRC32
+* Startup recovery that scans existing log files, truncates an invalid partial tail, and resumes at the next valid offset
+* Spring Boot `/append` and `/read` endpoints wired through the core API
+* Tests for append/read, restart recovery, partial-tail recovery, and concurrent append offsets
+
+Planned next milestones:
+
+* V0.2: persistent writers, batched fsync, sparse index, segment rolling, and benchmarks
+* V0.3: static 3-node replicated demo with configured leader/followers, quorum ack, and catch-up
 
 ---
 <img width="1665" height="910" alt="Image" src="https://github.com/user-attachments/assets/4663fbf6-efb5-4b86-ac07-2d4e36399e37" />
@@ -97,20 +137,17 @@ Result:
 
 ## 📂 Log Record Format
 
-Each log entry is stored sequentially in the following format:
+V0.1 stores records in a binary framed format:
 
 ```
-[offset][timestamp][key_length][key][value_length][value]
+magic | version | length | offset | timestamp | keyLength | valueLength | crc32 | key | value
 ```
 
 * `offset` → Monotonically increasing
+* `length` → Number of bytes in the record body
+* `crc32` → Detects corrupt or partial records during recovery
 * Records are immutable
 * New entries are appended at the end of the file
-
-### Example
-
-0|1734150400123|user-123|CREATE_TASK
-1|1734150400456|user-456|UPDATE_TASK
 
 Records are append-only and written sequentially to disk.
 Offsets are strictly increasing and never reused.
@@ -291,12 +328,11 @@ com.projects.logstore
 
 ## 🛠️ Tech Stack
 
-* **Java:** OpenJDK 23.0.1
+* **Java:** 17+
 * **Framework:** Spring Boot
 * **Build Tool:** Apache Maven 3.9.11
 * **I/O:** FileChannel for sequential disk writes
-* **Networking:** gRPC for inter-node communication
-* **Protocol:** Client -> REST (HTTP) | Leader <-> Followers (gRPC)
+* **Protocol:** Embedded Java API and REST over the Spring Boot server
 
 ---
 

@@ -1,41 +1,50 @@
 package com.projects.logstore.server;
 
+import com.projects.logstore.core.AppendResult;
+import com.projects.logstore.core.LogStore;
 import com.projects.logstore.dto.AppendDTO;
+import com.projects.logstore.dto.LogRecord;
 import com.projects.logstore.dto.ReadDTO;
 import com.projects.logstore.model.Data;
-import com.projects.logstore.tablet.RegistryTablet;
-import com.projects.logstore.tablet.Tablet;
-import com.projects.logstore.tablet.TabletRouter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Component
 public class TabletServer {
-    @Autowired
-    private TabletRouter tabletRouter;
-    @Autowired
-    private RegistryTablet registry;
+    private static final String DEFAULT_STREAM = "default";
+    private final LogStore logStore;
+
+    public TabletServer(LogStore logStore) {
+        this.logStore = logStore;
+    }
 
     public AppendDTO append(Data data){
-        int tabletId = getTabletRoute(data.getKey());
-        Tablet tablet = getTablet(tabletId);
-        long offSet = tablet.append(data.getKey(), data.getValue());
+        AppendResult result = logStore.append(DEFAULT_STREAM, data.getKey(), data.getValue().getBytes(StandardCharsets.UTF_8));
         AppendDTO appendDTO = new AppendDTO();
-        appendDTO.setTabletId(tabletId);
-        appendDTO.setOffset(offSet);
+        appendDTO.setTabletId(result.tabletId());
+        appendDTO.setOffset(result.offset());
         return appendDTO;
     }
 
-    private Tablet getTablet(int tabletId){
-        return registry.getTabletById(tabletId);
-    }
-
-    private int getTabletRoute(String key){
-        return tabletRouter.route(key);
-    }
-
     public ReadDTO read(int tabletId, Long startOffset, int limit ){
-        Tablet tablet = getTablet(tabletId);
-        return tablet.read(startOffset, limit);
+        List<LogRecord> records = logStore.readTablet(tabletId, startOffset, limit).stream()
+                .map(TabletServer::toDto)
+                .toList();
+        ReadDTO readDTO = new ReadDTO();
+        readDTO.setTabletId(tabletId);
+        readDTO.setOffset(startOffset);
+        readDTO.setLogRecords(records);
+        return readDTO;
+    }
+
+    private static LogRecord toDto(com.projects.logstore.core.LogRecord record) {
+        LogRecord dto = new LogRecord();
+        dto.setOffset(record.offset());
+        dto.setTimestamp(record.timestamp());
+        dto.setKey(record.key());
+        dto.setValue(new String(record.value(), StandardCharsets.UTF_8));
+        return dto;
     }
 }

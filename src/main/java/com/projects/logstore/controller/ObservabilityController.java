@@ -1,11 +1,11 @@
 package com.projects.logstore.controller;
 
+import com.projects.logstore.core.LogStore;
 import com.projects.logstore.dto.AppHealthDTO;
 import com.projects.logstore.dto.ClusterOverviewDTO;
+import com.projects.logstore.dto.LogRecord;
 import com.projects.logstore.dto.TabletDetailDTO;
 import com.projects.logstore.dto.TabletSummaryDTO;
-import com.projects.logstore.tablet.RegistryTablet;
-import com.projects.logstore.tablet.Tablet;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,29 +21,29 @@ import java.util.List;
 @RestController
 @RequestMapping("/")
 public class ObservabilityController {
-    private final RegistryTablet registryTablet;
+    private final LogStore logStore;
 
-    public ObservabilityController(RegistryTablet registryTablet) {
-        this.registryTablet = registryTablet;
+    public ObservabilityController(LogStore logStore) {
+        this.logStore = logStore;
     }
 
     @GetMapping("/health")
     public AppHealthDTO health() {
-        List<Tablet> tablets = registryTablet.getAllTablets();
+        List<LogStore.TabletInfo> tablets = logStore.tablets();
 
         AppHealthDTO dto = new AppHealthDTO();
         dto.setStatus("UP");
         dto.setAppName("LogStore");
         dto.setTimestamp(Instant.now());
         dto.setTotalTablets(tablets.size());
-        dto.setAvailableLogs((int) tablets.stream().filter(Tablet::logFileExists).count());
+        dto.setAvailableLogs((int) tablets.stream().filter(tablet -> tablet.sizeBytes() > 0).count());
         dto.setMode("single-node local development");
         return dto;
     }
 
     @GetMapping("/tablets")
     public List<TabletSummaryDTO> tablets() {
-        return registryTablet.getAllTablets().stream()
+        return logStore.tablets().stream()
                 .map(this::toSummary)
                 .toList();
     }
@@ -53,25 +53,25 @@ public class ObservabilityController {
             @PathVariable int tabletId,
             @RequestParam(required = false, defaultValue = "12") int recentLimit
     ) {
-        Tablet tablet = registryTablet.getTabletById(tabletId);
-        if (tablet == null) {
+        if (tabletId < 0 || tabletId >= logStore.partitionCount()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tablet not found");
         }
+        LogStore.TabletInfo tablet = logStore.tablets().get(tabletId);
 
         TabletDetailDTO dto = new TabletDetailDTO();
-        dto.setTabletId(tablet.getTabletId());
+        dto.setTabletId(tablet.tabletId());
         dto.setStatus(resolveStatus(tablet));
-        dto.setLogFilePath(tablet.getLogFilePath());
-        dto.setLogFileExists(tablet.logFileExists());
-        dto.setLatestOffset(tablet.getLatestOffset());
-        dto.setNextOffset(tablet.getNextOffset());
-        dto.setRecordCount(tablet.getRecordCount());
-        dto.setFileSizeBytes(tablet.getFileSizeBytes());
-        dto.setLastModifiedAt(tablet.getLastModifiedTime());
+        dto.setLogFilePath("managed by logstore-core");
+        dto.setLogFileExists(tablet.sizeBytes() > 0);
+        dto.setLatestOffset(tablet.latestOffset());
+        dto.setNextOffset(tablet.nextOffset());
+        dto.setRecordCount(tablet.nextOffset());
+        dto.setFileSizeBytes(tablet.sizeBytes());
+        dto.setLastModifiedAt(null);
 
-        long startOffset = Math.max(0L, tablet.getLatestOffset() - Math.max(0, recentLimit - 1));
-        dto.setRecentRecords(tablet.getLatestOffset() >= 0
-                ? tablet.read(startOffset, recentLimit).getLogRecords()
+        long startOffset = Math.max(0L, tablet.latestOffset() - Math.max(0, recentLimit - 1));
+        dto.setRecentRecords(tablet.latestOffset() >= 0
+                ? toDtoRecords(logStore.readTablet(tabletId, startOffset, recentLimit))
                 : List.of());
         return dto;
     }
@@ -83,30 +83,43 @@ public class ObservabilityController {
         dto.setTopologyMode("single-node / multi-tablet");
         dto.setLeaderElection("backend pending");
         dto.setReplication("backend pending");
-        dto.setTotalTablets(registryTablet.getTotalTablets());
+        dto.setTotalTablets(logStore.partitionCount());
         dto.setNote("The UI is cluster-aware, but live leader/follower topology is not exposed by the backend yet.");
         return dto;
     }
 
-    private TabletSummaryDTO toSummary(Tablet tablet) {
+    private TabletSummaryDTO toSummary(LogStore.TabletInfo tablet) {
         TabletSummaryDTO dto = new TabletSummaryDTO();
-        dto.setTabletId(tablet.getTabletId());
+        dto.setTabletId(tablet.tabletId());
         dto.setStatus(resolveStatus(tablet));
-        dto.setLogFileExists(tablet.logFileExists());
-        dto.setLatestOffset(tablet.getLatestOffset());
-        dto.setRecordCount(tablet.getRecordCount());
-        dto.setFileSizeBytes(tablet.getFileSizeBytes());
-        dto.setLastModifiedAt(tablet.getLastModifiedTime());
+        dto.setLogFileExists(tablet.sizeBytes() > 0);
+        dto.setLatestOffset(tablet.latestOffset());
+        dto.setRecordCount(tablet.nextOffset());
+        dto.setFileSizeBytes(tablet.sizeBytes());
+        dto.setLastModifiedAt(null);
         return dto;
     }
 
-    private String resolveStatus(Tablet tablet) {
-        if (!tablet.logFileExists()) {
+    private String resolveStatus(LogStore.TabletInfo tablet) {
+        if (tablet.sizeBytes() == 0) {
             return "idle";
         }
-        if (tablet.getRecordCount() == 0) {
+        if (tablet.nextOffset() == 0) {
             return "empty";
         }
         return "active";
+    }
+
+    private static List<LogRecord> toDtoRecords(List<com.projects.logstore.core.LogRecord> records) {
+        return records.stream()
+                .map(record -> {
+                    LogRecord dto = new LogRecord();
+                    dto.setOffset(record.offset());
+                    dto.setTimestamp(record.timestamp());
+                    dto.setKey(record.key());
+                    dto.setValue(new String(record.value(), java.nio.charset.StandardCharsets.UTF_8));
+                    return dto;
+                })
+                .toList();
     }
 }
