@@ -182,6 +182,8 @@ Important notes:
 * The backend writes local log files, so it should use a persistent disk on Render. Without one, data is lost on redeploy/restart.
 * The included blueprint uses a `starter` plan for the backend because Render persistent disks require a paid service.
 * The UI connects to the backend over Render's private network using a service reference, so you do not need to hardcode the backend public URL.
+* If you deploy services manually instead of via the blueprint, set `LOGSTORE_API_BASE_URL` on the frontend service to your backend URL, for example `https://logstore.onrender.com`.
+* To show the backend link inside the UI, set `NEXT_PUBLIC_BACKEND_URL` on the frontend service to the same public backend URL.
 
 ---
 
