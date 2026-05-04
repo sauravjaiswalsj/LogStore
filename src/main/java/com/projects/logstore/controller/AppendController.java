@@ -33,6 +33,9 @@ public class AppendController {
         if (data.getValue() == null){
             throw new IllegalArgumentException("Data value cannot be null");
         }
+        if ( data.getStream() == null || data.getStream().isEmpty()){
+            throw new IllegalArgumentException("Data stream cannot be null or empty");
+        }
         log.info("{}", data);
        return tabletServer.append(data);
     }

@@ -30,7 +30,7 @@ final class TabletLog {
     synchronized AppendResult append(String stream, String key, byte[] value) throws IOException {
         long offset = nextOffset;
         long timestamp = clock.millis();
-        byte[] encoded = RecordCodec.encode(offset, timestamp, key, value);
+        byte[] encoded = RecordCodec.encode(offset, timestamp, stream, key, value);
         try (FileChannel channel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
             writeFully(channel, ByteBuffer.wrap(encoded));
             if (durability == Durability.FSYNC_EVERY_WRITE) {
@@ -53,8 +53,8 @@ final class TabletLog {
                 if (record == null) {
                     break;
                 }
-                if (record.offset() >= offset) {
-                    records.add(new LogRecord(stream, record.offset(), record.timestamp(), record.key(), record.value()));
+                if (record.offset() >= offset && stream.equals(record.stream())) {
+                    records.add(new LogRecord(record.stream(), record.offset(), record.timestamp(), record.key(), record.value()));
                 }
             }
         }
@@ -138,7 +138,7 @@ final class TabletLog {
             if (offset != expectedOffset) {
                 return -1L;
             }
-            framedRecords.add(RecordCodec.encode(offset, timestamp, parts[2], parts[3].getBytes(StandardCharsets.UTF_8)));
+            framedRecords.add(RecordCodec.encode(offset, timestamp, "default", parts[2], parts[3].getBytes(StandardCharsets.UTF_8)));
             expectedOffset++;
         }
 

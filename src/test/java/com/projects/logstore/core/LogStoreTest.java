@@ -51,6 +51,20 @@ class LogStoreTest {
     }
 
     @Test
+    void readsOnlyRequestedStreamWhenStreamsShareTablet() {
+        try (LogStore store = openStore()) {
+            store.append("orders", "ORD-1", bytes("one"));
+            store.append("payments", "PAY-1", bytes("paid"));
+            store.append("orders", "ORD-2", bytes("two"));
+
+            List<LogRecord> records = store.read("orders", 0, 10);
+
+            assertThat(records).extracting(LogRecord::stream).containsExactly("orders", "orders");
+            assertThat(records).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2");
+        }
+    }
+
+    @Test
     void restartRecoveryResumesAtNextValidOffset() {
         try (LogStore store = openStore()) {
             store.append("orders", "ORD-1", bytes("one"));
@@ -94,8 +108,8 @@ class LogStoreTest {
                 StandardOpenOption.CREATE_NEW);
 
         try (LogStore store = openStore()) {
-            assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2");
-            assertThat(store.append("orders", "ORD-3", bytes("three")).offset()).isEqualTo(2L);
+            assertThat(store.read("default", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2");
+            assertThat(store.append("default", "ORD-3", bytes("three")).offset()).isEqualTo(2L);
         }
 
         assertThat(Files.readString(logFile, StandardCharsets.ISO_8859_1)).doesNotContain("1734150400123|ORD-1");

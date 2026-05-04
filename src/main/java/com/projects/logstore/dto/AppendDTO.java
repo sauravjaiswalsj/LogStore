@@ -6,6 +6,7 @@ import lombok.Setter;
 @Data
 @Setter
 public class AppendDTO {
+    String stream;
     int tabletId;
     long offset;
 }

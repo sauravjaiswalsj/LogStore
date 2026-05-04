@@ -15,6 +15,7 @@ type TrailEvent = AppendResult & {
 };
 
 export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
+  const [stream, setStream] = useState("default");
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,8 +24,8 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
   const [error, setError] = useState<string | null>(null);
 
   const predictedTablet = useMemo(
-    () => routeTabletForKey(key, totalTablets),
-    [key, totalTablets]
+    () => routeTabletForKey(stream, totalTablets),
+    [stream, totalTablets]
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -38,7 +39,7 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ key, value })
+        body: JSON.stringify({ stream, key, value })
       });
 
       const payload = await response.json();
@@ -48,6 +49,7 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
 
       const nextReceipt: TrailEvent = {
         ...(payload as AppendResult),
+        stream,
         key,
         value,
         createdAt: new Date().toISOString()
@@ -71,6 +73,17 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
         action={<StatusPill status="interactive" />}
       >
         <form className="form-grid" onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="stream">Stream</label>
+            <input
+              id="stream"
+              name="stream"
+              onChange={(event) => setStream(event.target.value)}
+              placeholder="orders"
+              required
+              value={stream}
+            />
+          </div>
           <div className="field">
             <label htmlFor="key">Key</label>
             <input
@@ -108,6 +121,7 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
             <button
               className="button button--ghost"
               onClick={() => {
+                setStream("default");
                 setKey("");
                 setValue("");
                 setError(null);

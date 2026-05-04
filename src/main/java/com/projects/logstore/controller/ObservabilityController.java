@@ -70,9 +70,7 @@ public class ObservabilityController {
         dto.setLastModifiedAt(null);
 
         long startOffset = Math.max(0L, tablet.latestOffset() - Math.max(0, recentLimit - 1));
-        dto.setRecentRecords(tablet.latestOffset() >= 0
-                ? toDtoRecords(logStore.readTablet(tabletId, startOffset, recentLimit))
-                : List.of());
+        dto.setRecentRecords(List.of());
         return dto;
     }
 

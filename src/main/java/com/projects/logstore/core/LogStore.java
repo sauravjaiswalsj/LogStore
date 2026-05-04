@@ -60,12 +60,9 @@ public final class LogStore implements Closeable {
         }
     }
 
-    public List<LogRecord> readTablet(int tabletId, long offset, int limit) {
-        if (tabletId < 0 || tabletId >= tablets.length) {
-            throw new IllegalArgumentException("Unknown tabletId " + tabletId);
-        }
+    public List<LogRecord> readTablet(String stream, long offset, int limit) {
         try {
-            return tablets[tabletId].read("tablet-" + tabletId, offset, limit);
+            return tabletForStream(stream).read(stream, offset, limit);
         } catch (IOException ex) {
             throw new UncheckedIOException("Failed to read tablet records", ex);
         }

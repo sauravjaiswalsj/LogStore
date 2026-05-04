@@ -13,7 +13,6 @@ import java.util.List;
 
 @Component
 public class TabletServer {
-    private static final String DEFAULT_STREAM = "default";
     private final LogStore logStore;
 
     public TabletServer(LogStore logStore) {
@@ -21,20 +20,24 @@ public class TabletServer {
     }
 
     public AppendDTO append(Data data){
-        AppendResult result = logStore.append(DEFAULT_STREAM, data.getKey(), data.getValue().getBytes(StandardCharsets.UTF_8));
+        AppendResult result = logStore.append(data.getStream(), data.getKey(), data.getValue().getBytes(StandardCharsets.UTF_8));
         AppendDTO appendDTO = new AppendDTO();
+        appendDTO.setStream(result.stream());
         appendDTO.setTabletId(result.tabletId());
         appendDTO.setOffset(result.offset());
         return appendDTO;
     }
 
-    public ReadDTO read(int tabletId, Long startOffset, int limit ){
-        List<LogRecord> records = logStore.readTablet(tabletId, startOffset, limit).stream()
+    public ReadDTO read(String stream, Long startOffset, int limit ){
+        List<LogRecord> records = logStore.read(stream, startOffset, limit).stream()
                 .map(TabletServer::toDto)
                 .toList();
         ReadDTO readDTO = new ReadDTO();
-        readDTO.setTabletId(tabletId);
+        readDTO.setStream(stream);
+        readDTO.setTabletId(logStore.tabletForStreamId(stream));
         readDTO.setOffset(startOffset);
+        readDTO.setLimit(limit);
+        readDTO.setNextOffset(records.isEmpty() ? startOffset : records.get(records.size() - 1).getOffset() + 1L);
         readDTO.setLogRecords(records);
         return readDTO;
     }
