@@ -376,7 +376,7 @@ LogStore/
 
 ## Tech Stack
 
-* Java 17+
+* Java 23
 * Spring Boot
 * Maven
 * Java NIO `FileChannel`

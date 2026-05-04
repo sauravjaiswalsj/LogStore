@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk-jammy AS builder
+FROM eclipse-temurin:23-jdk-jammy AS builder
 WORKDIR /workspace
 
 COPY .mvn .mvn
@@ -16,7 +16,7 @@ COPY logstore-benchmarks logstore-benchmarks
 COPY data data
 RUN ./mvnw -q -DskipTests package
 
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:23-jre-jammy
 WORKDIR /app
 
 COPY --from=builder /workspace/logstore-server/target/logstore-server-0.0.1-SNAPSHOT.jar app.jar
