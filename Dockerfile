@@ -4,17 +4,22 @@ WORKDIR /workspace
 COPY .mvn .mvn
 COPY mvnw mvnw
 COPY pom.xml pom.xml
+COPY logstore-core/pom.xml logstore-core/pom.xml
+COPY logstore-server/pom.xml logstore-server/pom.xml
+COPY logstore-benchmarks/pom.xml logstore-benchmarks/pom.xml
 RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests dependency:go-offline
 
-COPY src src
+COPY logstore-core logstore-core
+COPY logstore-server logstore-server
+COPY logstore-benchmarks logstore-benchmarks
 COPY data data
 RUN ./mvnw -q -DskipTests package
 
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-COPY --from=builder /workspace/target/LogStore-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /workspace/logstore-server/target/logstore-server-0.0.1-SNAPSHOT.jar app.jar
 COPY --from=builder /workspace/data ./data
 
 EXPOSE 8080

@@ -59,11 +59,11 @@ LogStore is not a Kafka replacement. It is an embedded commit log for applicatio
 ### Embedded Java API
 
 ```java
-import com.projects.logstore.core.AppendResult;
-import com.projects.logstore.core.Durability;
-import com.projects.logstore.core.LogRecord;
-import com.projects.logstore.core.LogStore;
-import com.projects.logstore.core.LogStoreConfig;
+import com.logstore.core.api.AppendResult;
+import com.logstore.core.api.Durability;
+import com.logstore.core.api.LogRecord;
+import com.logstore.core.api.LogStore;
+import com.logstore.core.api.LogStoreConfig;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -71,8 +71,7 @@ import java.util.List;
 LogStore store = LogStore.open(LogStoreConfig.builder()
     .dataDir(Path.of("./data/logstore"))
     .partitions(16)
-    .durability(Durability.BATCHED_FSYNC)
-    .flushIntervalMillis(5)
+    .durability(Durability.FSYNC_EVERY_WRITE)
     .build());
 
 AppendResult result = store.append(
@@ -91,7 +90,7 @@ store.close();
 ### Spring Boot Server
 
 ```bash
-./mvnw spring-boot:run
+./mvnw -pl logstore-server spring-boot:run
 ```
 
 Endpoints:
@@ -107,6 +106,7 @@ POST /append
 Content-Type: application/json
 
 {
+  "stream": "orders",
   "key": "ORD-1",
   "value": "{\"event\":\"OrderCreated\",\"orderId\":\"ORD-1\"}"
 }
@@ -352,15 +352,18 @@ LogStore is:
 
 ```text
 LogStore/
-├── src/main/java/com/projects/logstore
-│   ├── core              # embedded log API and storage engine
-│   ├── server            # Spring Boot-facing services
-│   ├── controller        # REST endpoints
-│   ├── replication       # distributed alpha components
-│   ├── cluster           # cluster metadata and health
-│   ├── tablet            # partition/tablet internals
-│   └── storage           # append/read storage primitives
-├── src/test/java         # correctness and recovery tests
+├── logstore-core
+│   └── src/main/java/com/logstore/core
+│       ├── api           # public embedded Java API
+│       ├── storage       # tablets, segments, encoding, decoding, recovery
+│       └── util          # CRC and hashing helpers
+├── logstore-server
+│   └── src/main/java/com/projects/logstore
+│       ├── controller    # REST endpoints
+│       ├── server        # Spring Boot-facing services
+│       ├── replication   # distributed alpha components
+│       └── cluster       # cluster metadata and health
+├── logstore-benchmarks   # benchmark module placeholder
 ├── script                # load and stress tests
 ├── ui                    # Next.js operator console
 ├── data/logstore         # local log data
