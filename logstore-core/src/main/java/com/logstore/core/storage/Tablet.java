@@ -34,13 +34,22 @@ public final class Tablet {
         long offset = nextOffset;
         long timestamp = clock.millis();
         byte[] encoded = RecordEncoder.encode(offset, timestamp, stream, key, value);
-        try (FileChannel channel = FileChannel.open(segment.path(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
-            writeFully(channel, ByteBuffer.wrap(encoded));
-            if (durability == Durability.FSYNC_EVERY_WRITE) {
-                channel.force(true);
+        try {
+            try (FileChannel channel = FileChannel.open(segment.path(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+                writeFully(channel, ByteBuffer.wrap(encoded));
+                if (durability == Durability.FSYNC_EVERY_WRITE) {
+                    channel.force(true);
+                }
             }
+            nextOffset++;
+        } catch (IOException ex) {
+            try {
+                nextOffset = RecoveryManager.recoverNextOffset(segment.path(), durability);
+            } catch (IOException recoveryEx) {
+                ex.addSuppressed(recoveryEx);
+            }
+            throw ex;
         }
-        nextOffset++;
         return new AppendResult(stream, tabletId, offset, timestamp);
     }
 

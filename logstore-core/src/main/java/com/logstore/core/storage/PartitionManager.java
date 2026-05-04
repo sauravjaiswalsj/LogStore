@@ -13,6 +13,9 @@ public final class PartitionManager {
     private final Tablet[] tablets;
 
     public PartitionManager(LogStoreConfig config, Clock clock) throws IOException {
+        if (config.partitions() <= 0) {
+            throw new IllegalArgumentException("partitions must be greater than zero");
+        }
         this.tablets = new Tablet[config.partitions()];
         for (int i = 0; i < tablets.length; i++) {
             tablets[i] = new Tablet(i, config.dataDir(), config.durability(), clock);

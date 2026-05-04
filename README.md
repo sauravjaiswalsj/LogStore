@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sauravjaiswalsj/LogStore)
 
-**LogStore is an embedded distributed commit log for Java services.**
+**LogStore is an experimental embedded commit log for Java services.**
 
 It gives applications a durable, ordered, replayable event log without requiring an external Kafka cluster for small and medium-scale workflows.
 
@@ -20,7 +20,7 @@ Modern services often need more than application logs:
 * ordered replay from a known offset
 * crash recovery from local disk
 * low operational overhead
-* optional replication for stronger durability
+* a path to optional replication later
 
 Kafka is excellent for large distributed streaming systems, but it introduces a broker cluster and operational complexity. Chronicle Queue is excellent as an embedded Java queue, but it is not a distributed commit log.
 
@@ -30,7 +30,7 @@ LogStore sits between them:
 |---|---:|---:|---|
 | Apache Kafka | No | Yes | Large-scale event streaming |
 | Chronicle Queue | Yes | No | Low-latency local persisted queues |
-| LogStore | Yes | Yes | Embedded durable logs with optional replication |
+| LogStore | Yes | Planned | Embedded durable logs before full streaming infrastructure |
 
 LogStore is not a Kafka replacement. It is an embedded commit log for applications that want durable, replayable event storage before they need full streaming infrastructure.
 
@@ -46,11 +46,10 @@ LogStore is not a Kafka replacement. It is an embedded commit log for applicatio
 * Binary framed record format with CRC validation
 * Startup recovery from existing log files
 * Per-tablet single-writer concurrency model
-* Configurable durability modes
+* `FSYNC_EVERY_WRITE` durability
 * Persistent disk-backed storage
 * Spring Boot server wrapper
 * Operator UI for inspecting tablets, offsets, and cluster state
-* Static 3-node replicated alpha mode with leader/follower log shipping
 
 ---
 
@@ -116,7 +115,7 @@ Response:
 
 ```json
 {
-  "stream": "default",
+  "stream": "orders",
   "offset": 42,
   "tabletId": 3
 }
@@ -125,77 +124,35 @@ Response:
 Read records:
 
 ```http
-GET /read?stream=default&offset=0&limit=100
+GET /read?stream=orders&offset=0&limit=100
 ```
 
 ---
 
-## Distributed Alpha Mode
+## Alpha Scope
 
-LogStore can run as a static replicated cluster for local demos and alpha testing.
-
-The V1 alpha distributed mode uses:
-
-* static 3-node membership
-* configured leader/follower roles
-* leader-owned offset assignment
-* follower append replication
-* quorum acknowledgements
-* follower catch-up from offset
-
-Automatic leader election is intentionally not part of this alpha. The goal is to prove the embedded-distributed storage model before adding full consensus machinery.
-
-Example cluster configuration:
-
-```java
-LogStoreCluster cluster = LogStoreCluster.open(ClusterConfig.builder()
-    .nodeId("node-1")
-    .dataDir(Path.of("./data/node-1"))
-    .peers(List.of("node-1:9091", "node-2:9091", "node-3:9091"))
-    .leader(true)
-    .replicationFactor(3)
-    .ackMode(AckMode.QUORUM)
-    .build());
-```
-
-Replication flow:
-
-```text
-client append
-    |
-    v
-leader tablet writer
-    |
-    +--> local append
-    +--> follower 1 append
-    +--> follower 2 append
-    |
-    v
-ack after configured durability level
-```
+The current alpha is V0.1 embedded core. Static replication, gRPC, leader/follower log shipping,
+batched fsync, segment rolling, sparse indexes, and benchmark claims are planned follow-up work.
 
 ---
 
 ## Architecture
 
 ```text
-                 Embedded Java API / REST / gRPC
+                 Embedded Java API / REST
                               |
                               v
                          LogStore Core
                               |
                 +-------------+-------------+
                 |                           |
-          Stream Router                Cluster Layer
-                |                           |
-                v                           v
-       key -> tablet/partition       leader/follower sync
+          Stream Router
                 |
                 v
-       single writer per tablet
+       stream -> tablet/partition
                 |
                 v
-       segmented append-only files
+       append-only tablet files
                 |
                 v
         recovery + offset replay
@@ -204,17 +161,17 @@ ack after configured durability level
 ### Storage Model
 
 ```text
-stream -> key hash -> tablet -> segment file -> framed records
+stream -> tablet -> framed records
 ```
 
 Normal users interact with streams and offsets. Tablets and segments are internal implementation details exposed only through admin APIs and the UI.
 
 ### Concurrency Model
 
-LogStore uses one append pipeline per tablet:
+LogStore serializes append operations per tablet:
 
 ```text
-caller threads -> tablet queue -> single tablet writer -> disk
+caller threads -> synchronized tablet append -> disk
 ```
 
 This preserves ordering within a tablet while allowing parallel writes across tablets.
@@ -224,7 +181,7 @@ This preserves ordering within a tablet while allowing parallel writes across ta
 Records are stored as binary frames:
 
 ```text
-magic | version | length | offset | timestamp | keyLength | valueLength | crc32 | key | value
+magic | version | length | offset | timestamp | streamLength | keyLength | valueLength | crc32 | stream | key | value
 ```
 
 This format supports:
@@ -236,42 +193,23 @@ This format supports:
 
 ---
 
-## Durability Modes
+## Durability
+
+V0.1 implements one durability behavior:
 
 | Mode | Description | Use Case |
 |---|---|---|
 | `FSYNC_EVERY_WRITE` | Force data to disk on every append | strongest local durability |
-| `BATCHED_FSYNC` | Flush after a batch size or time interval | balanced latency and throughput |
-| `ASYNC_FLUSH` | Let the OS flush in the background | fastest mode, accepts recent-data-loss risk |
 
-Durability is explicit because there is no honest single setting that is best for every workload.
+`BATCHED_FSYNC` and `ASYNC_FLUSH` remain in the enum as V0.2 placeholders. In V0.1 they are accepted
+by configuration but behave like `FSYNC_EVERY_WRITE`.
 
 ---
 
 ## Benchmarks
 
-LogStore reports benchmarks by workload, payload size, durability mode, and hardware.
-
-Benchmark layers:
-
-* embedded core benchmark with JMH
-* Spring Boot HTTP append benchmark
-* gRPC append/replication benchmark
-* recovery benchmark
-
-Metrics:
-
-* writes/sec
-* p50 latency
-* p95 latency
-* p99 latency
-* failure rate
-* payload size
-* JVM version
-* disk type
-* durability mode
-
-No throughput number should be interpreted without its durability mode. `FSYNC_EVERY_WRITE` and `BATCHED_FSYNC` measure very different tradeoffs.
+Benchmarks are not published yet. No throughput number should be treated as a claim until it includes
+the command, machine, JVM version, payload size, partitions, and durability mode.
 
 ---
 
@@ -380,7 +318,6 @@ LogStore/
 * Spring Boot
 * Maven
 * Java NIO `FileChannel`
-* gRPC/Protobuf for distributed alpha mode
 * Next.js operator UI
 * Docker / Render deployment
 
@@ -389,6 +326,10 @@ LogStore/
 ## Roadmap
 
 * automatic leader election
+* static replicated alpha mode
+* gRPC/Protobuf transport
+* batched fsync durability mode
+* async flush durability mode
 * persistent index files
 * log compaction
 * snapshots

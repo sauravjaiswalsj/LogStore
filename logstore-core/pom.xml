@@ -4,14 +4,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.projects</groupId>
+        <groupId>io.github.sauravjaiswalsj</groupId>
         <artifactId>logstore-parent</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.1.0</version>
         <relativePath>..</relativePath>
     </parent>
 
     <artifactId>logstore-core</artifactId>
-    <name>logstore-core</name>
+    <name>LogStore Core</name>
+    <description>Embedded append-only log store core library for Java services.</description>
 
     <dependencies>
         <dependency>
@@ -22,6 +23,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <version>3.27.7</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

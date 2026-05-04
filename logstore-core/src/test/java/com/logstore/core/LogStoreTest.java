@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LogStoreTest {
     @TempDir
@@ -153,10 +154,99 @@ class LogStoreTest {
             store.append("orders", "ORD-1", bytes("one"));
             store.append("payments", "PAY-1", bytes("paid"));
 
-            List<LogRecord> records = store.readTablet(0, 0, 10);
+            List<LogRecord> records = store.readTabletForAdmin(0, 0, 10);
 
             assertThat(records).extracting(LogRecord::stream).containsExactly("orders", "payments");
             assertThat(records).extracting(LogRecord::key).containsExactly("ORD-1", "PAY-1");
+        }
+    }
+
+    @Test
+    void invalidConfigIsRejected() {
+        assertThatThrownBy(() -> LogStoreConfig.builder().dataDir(null).build())
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> LogStoreConfig.builder().durability(null).build())
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> LogStoreConfig.builder().partitions(0).build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void invalidApiInputsAreRejected() {
+        try (LogStore store = openStore()) {
+            assertThatThrownBy(() -> store.append(null, "key", bytes("value")))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.append("orders", " ", bytes("value")))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.append("orders", "key", null))
+                    .isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> store.read("orders", -1, 10))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.tabletForStreamId(" "))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.replay("orders", 0, 0, record -> { }))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.replay("orders", 0, 10, null))
+                    .isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> store.readTabletForAdmin(99, 0, 10))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void plannedDurabilityModesCurrentlyBehaveLikeFsyncEveryWrite() {
+        for (Durability durability : List.of(Durability.BATCHED_FSYNC, Durability.ASYNC_FLUSH)) {
+            try (LogStore store = LogStore.open(LogStoreConfig.builder()
+                    .dataDir(tempDir.resolve(durability.name()))
+                    .partitions(1)
+                    .durability(durability)
+                    .build())) {
+                store.append("orders", "ORD-1", bytes("one"));
+
+                assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1");
+            }
+        }
+    }
+
+    @Test
+    void operationsAfterCloseAreRejected() {
+        LogStore store = openStore();
+        store.close();
+
+        assertThatThrownBy(() -> store.append("orders", "ORD-1", bytes("one")))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> store.read("orders", 0, 10))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(store::partitionCount)
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void oversizedAppendPayloadIsRejected() {
+        try (LogStore store = openStore()) {
+            byte[] value = new byte[17 * 1024 * 1024];
+
+            assertThatThrownBy(() -> store.append("orders", "ORD-1", value))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void restartRecoveryTruncatesCrcMismatchTail() throws Exception {
+        try (LogStore store = openStore()) {
+            store.append("orders", "ORD-1", bytes("one"));
+        }
+        Path logFile = tempDir.resolve("tablet-0.log");
+        byte[] contents = Files.readAllBytes(logFile);
+        contents[contents.length - 1] = (byte) (contents[contents.length - 1] + 1);
+        Files.write(logFile, contents, StandardOpenOption.TRUNCATE_EXISTING);
+
+        try (LogStore reopened = openStore()) {
+            assertThat(reopened.read("orders", 0, 10)).isEmpty();
+            AppendResult result = reopened.append("orders", "ORD-1", bytes("one"));
+
+            assertThat(result.offset()).isZero();
+            assertThat(reopened.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1");
         }
     }
 

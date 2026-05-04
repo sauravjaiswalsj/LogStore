@@ -20,7 +20,8 @@ public class TabletServer {
     }
 
     public AppendDTO append(Data data){
-        AppendResult result = logStore.append(data.getStream(), data.getKey(), data.getValue().getBytes(StandardCharsets.UTF_8));
+        byte[] valueBytes = data.getValue() != null ? data.getValue().getBytes(StandardCharsets.UTF_8) : new byte[0];
+        AppendResult result = logStore.append(data.getStream(), data.getKey(), valueBytes);
         AppendDTO appendDTO = new AppendDTO();
         appendDTO.setStream(result.stream());
         appendDTO.setTabletId(result.tabletId());

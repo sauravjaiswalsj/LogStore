@@ -12,6 +12,7 @@ import java.util.Objects;
 
 public final class LogStore implements Closeable {
     private final PartitionManager partitionManager;
+    private boolean closed;
 
     private LogStore(LogStoreConfig config, Clock clock) throws IOException {
         this.partitionManager = new PartitionManager(config, clock);
@@ -34,6 +35,7 @@ public final class LogStore implements Closeable {
     }
 
     public AppendResult append(String stream, String key, byte[] value) {
+        ensureOpen();
         validateAppend(stream, key, value);
         try {
             return partitionManager.tabletForStream(stream).append(stream, key, value);
@@ -43,6 +45,7 @@ public final class LogStore implements Closeable {
     }
 
     public List<LogRecord> read(String stream, long offset, int limit) {
+        ensureOpen();
         validateRead(stream, offset);
         if (limit <= 0) {
             return List.of();
@@ -54,7 +57,8 @@ public final class LogStore implements Closeable {
         }
     }
 
-    public List<LogRecord> readTablet(int tabletId, long offset, int limit) {
+    public List<LogRecord> readTabletForAdmin(int tabletId, long offset, int limit) {
+        ensureOpen();
         if (offset < 0) {
             throw new IllegalArgumentException("offset cannot be negative");
         }
@@ -69,6 +73,7 @@ public final class LogStore implements Closeable {
     }
 
     public void replay(String stream, long offset, int batchSize, RecordHandler handler) {
+        ensureOpen();
         Objects.requireNonNull(handler, "handler");
         if (batchSize <= 0) {
             throw new IllegalArgumentException("batchSize must be greater than zero");
@@ -91,14 +96,18 @@ public final class LogStore implements Closeable {
     }
 
     public int tabletForStreamId(String stream) {
+        ensureOpen();
+        validateStream(stream);
         return partitionManager.tabletIdForStream(stream);
     }
 
     public int partitionCount() {
+        ensureOpen();
         return partitionManager.partitionCount();
     }
 
     public List<TabletInfo> tablets() {
+        ensureOpen();
         try {
             return partitionManager.tablets();
         } catch (IOException ex) {
@@ -108,6 +117,7 @@ public final class LogStore implements Closeable {
 
     @Override
     public void close() {
+        closed = true;
     }
 
     private static void validateAppend(String stream, String key, byte[] value) {
@@ -128,6 +138,12 @@ public final class LogStore implements Closeable {
     private static void validateStream(String stream) {
         if (stream == null || stream.isBlank()) {
             throw new IllegalArgumentException("stream cannot be null or blank");
+        }
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("LogStore is closed");
         }
     }
 }

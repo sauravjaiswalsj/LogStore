@@ -4,9 +4,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.projects</groupId>
+        <groupId>io.github.sauravjaiswalsj</groupId>
         <artifactId>logstore-parent</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.1.0</version>
         <relativePath>..</relativePath>
     </parent>
 
@@ -15,7 +15,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.projects</groupId>
+            <groupId>io.github.sauravjaiswalsj</groupId>
             <artifactId>logstore-core</artifactId>
             <version>${project.version}</version>
         </dependency>

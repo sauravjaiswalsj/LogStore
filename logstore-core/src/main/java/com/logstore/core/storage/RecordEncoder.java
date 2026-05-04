@@ -20,6 +20,9 @@ final class RecordEncoder {
         byte[] streamBytes = stream.getBytes(StandardCharsets.UTF_8);
         byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
         byte[] valueBytes = value.clone();
+        if (streamBytes.length > MAX_FIELD_BYTES || keyBytes.length > MAX_FIELD_BYTES || valueBytes.length > MAX_FIELD_BYTES) {
+            throw new IllegalArgumentException("record field exceeds max encoded size");
+        }
         int bodyLength = BODY_FIXED_BYTES + streamBytes.length + keyBytes.length + valueBytes.length;
         if (bodyLength > MAX_RECORD_BODY_BYTES) {
             throw new IllegalArgumentException("record exceeds max encoded size");
