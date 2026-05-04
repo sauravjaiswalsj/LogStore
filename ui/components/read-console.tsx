@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/format";
 import { LogRecord, TabletDetail } from "@/lib/types";
 
 export function ReadConsole({ detail }: { detail: TabletDetail }) {
+  const [stream, setStream] = useState("default");
   const [startOffset, setStartOffset] = useState(
     detail.latestOffset >= 0 ? Math.max(0, detail.latestOffset - 9) : 0
   );
@@ -23,8 +24,8 @@ export function ReadConsole({ detail }: { detail: TabletDetail }) {
 
     try {
       const params = new URLSearchParams({
-        tabletId: String(detail.tabletId),
-        startOffset: String(startOffset),
+        stream,
+        offset: String(startOffset),
         limit: String(limit)
       });
       const response = await fetch(`/api/read?${params.toString()}`);
@@ -50,6 +51,17 @@ export function ReadConsole({ detail }: { detail: TabletDetail }) {
         action={<StatusPill status="readable" />}
       >
         <form className="form-grid" onSubmit={handleRead}>
+          <div className="field">
+            <label htmlFor="stream">Stream</label>
+            <input
+              id="stream"
+              name="stream"
+              onChange={(event) => setStream(event.target.value)}
+              placeholder="orders"
+              required
+              value={stream}
+            />
+          </div>
           <div className="field">
             <label htmlFor="startOffset">Start offset</label>
             <input
@@ -108,7 +120,7 @@ export function ReadConsole({ detail }: { detail: TabletDetail }) {
           </div>
           <div className="timeline-item">
             <strong className="mono">backend shape: GET /read</strong>
-            <p>The current implementation reads from a specific tablet and starting offset, with an optional limit.</p>
+            <p>The current implementation reads from a stream and starting offset, with an optional limit.</p>
           </div>
         </div>
       </Panel>

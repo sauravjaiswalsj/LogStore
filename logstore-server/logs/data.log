@@ -1,0 +1,18 @@
+02:28:32.046 [main] INFO  o.s.t.c.s.AnnotationConfigContextLoaderUtils ---- Could not detect default configuration classes for test class [com.projects.logstore.LogStoreApplicationTests]: LogStoreApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration. 
+------- 
+02:28:32.150 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper ---- Found @SpringBootConfiguration com.projects.logstore.LogStoreApplication for test class com.projects.logstore.LogStoreApplicationTests 
+------- 
+02:28:32.428 [main] INFO  c.p.l.LogStoreApplicationTests ---- Starting LogStoreApplicationTests using Java 23.0.1 with PID 41174 (started by sauravjaiswal in /Users/sauravjaiswal/Documents/2025/Codes/Projects/LogStore/logstore-server) 
+------- 
+02:28:32.428 [main] INFO  c.p.l.LogStoreApplicationTests ---- The following 1 profile is active: "dev" 
+------- 
+02:28:33.734 [main] INFO  com.projects.logstore.tablet.Tablet ---- File target/logstore-spring-context-test/tablet-0.log does not exist 
+------- 
+02:28:33.734 [main] INFO  com.projects.logstore.tablet.Tablet ---- File target/logstore-spring-context-test/tablet-1.log does not exist 
+------- 
+02:28:33.871 [main] INFO  o.s.v.b.OptionalValidatorFactoryBean ---- Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath. 
+------- 
+02:28:34.246 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver ---- Exposing 1 endpoint beneath base path '/actuator' 
+------- 
+02:28:34.280 [main] INFO  c.p.l.LogStoreApplicationTests ---- Started LogStoreApplicationTests in 2.04 seconds (process running for 2.973) 
+------- 

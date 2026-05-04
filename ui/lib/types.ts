@@ -20,6 +20,7 @@ export type TabletSummary = {
 export type LogRecord = {
   offset: number;
   timestamp: number;
+  stream?: string;
   key: string;
   value: string;
 };
@@ -47,13 +48,17 @@ export type ClusterOverview = {
 };
 
 export type AppendResult = {
+  stream: string;
   tabletId: number;
   offset: number;
 };
 
 export type ReadResult = {
+  stream: string;
   tabletId: number;
   offset: number;
+  limit: number;
+  nextOffset: number;
   logRecords: LogRecord[];
 };
 
