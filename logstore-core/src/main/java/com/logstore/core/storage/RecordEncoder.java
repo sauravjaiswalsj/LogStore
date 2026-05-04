@@ -10,6 +10,8 @@ final class RecordEncoder {
     static final short VERSION = 1;
     static final int PREFIX_BYTES = Integer.BYTES + Short.BYTES + Integer.BYTES;
     static final int BODY_FIXED_BYTES = Long.BYTES + Long.BYTES + Integer.BYTES + Integer.BYTES + Integer.BYTES + Integer.BYTES;
+    static final int MAX_RECORD_BODY_BYTES = 16 * 1024 * 1024;
+    static final int MAX_FIELD_BYTES = 10 * 1024 * 1024;
 
     private RecordEncoder() {
     }
@@ -19,6 +21,9 @@ final class RecordEncoder {
         byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
         byte[] valueBytes = value.clone();
         int bodyLength = BODY_FIXED_BYTES + streamBytes.length + keyBytes.length + valueBytes.length;
+        if (bodyLength > MAX_RECORD_BODY_BYTES) {
+            throw new IllegalArgumentException("record exceeds max encoded size");
+        }
         int crc = CRCUtil.recordCrc(offset, timestamp, streamBytes, keyBytes, valueBytes);
 
         ByteBuffer buffer = ByteBuffer.allocate(PREFIX_BYTES + bodyLength);

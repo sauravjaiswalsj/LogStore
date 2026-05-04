@@ -23,6 +23,13 @@ public final class PartitionManager {
         return tablets[tabletIdForStream(stream)];
     }
 
+    public Tablet tabletById(int tabletId) {
+        if (tabletId < 0 || tabletId >= tablets.length) {
+            throw new IllegalArgumentException("Unknown tabletId " + tabletId);
+        }
+        return tablets[tabletId];
+    }
+
     public int tabletIdForStream(String stream) {
         return HashUtil.partitionFor(stream, tablets.length);
     }

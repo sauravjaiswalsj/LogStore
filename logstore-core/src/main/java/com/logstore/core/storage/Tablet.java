@@ -64,6 +64,26 @@ public final class Tablet {
         return records;
     }
 
+    public synchronized List<LogRecord> readAll(long offset, int limit) throws IOException {
+        if (limit <= 0 || !Files.exists(segment.path())) {
+            return List.of();
+        }
+
+        List<LogRecord> records = new ArrayList<>();
+        try (FileChannel channel = FileChannel.open(segment.path(), StandardOpenOption.READ)) {
+            while (records.size() < limit) {
+                RecordDecoder.DecodedRecord record = RecoveryManager.readNext(channel);
+                if (record == null) {
+                    break;
+                }
+                if (record.offset() >= offset) {
+                    records.add(new LogRecord(record.stream(), record.offset(), record.timestamp(), record.key(), record.value()));
+                }
+            }
+        }
+        return records;
+    }
+
     int tabletId() {
         return tabletId;
     }

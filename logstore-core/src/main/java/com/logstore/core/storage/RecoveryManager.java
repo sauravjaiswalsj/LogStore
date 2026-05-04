@@ -45,7 +45,7 @@ final class RecoveryManager {
             }
         }
 
-        if (validBytes > 0L || Files.size(path) == 0L) {
+        if (validBytes > 0L || Files.size(path) == 0L || startsWithLogStoreMagic(path)) {
             try (FileChannel channel = FileChannel.open(path, StandardOpenOption.WRITE)) {
                 channel.truncate(validBytes);
             }
@@ -62,7 +62,10 @@ final class RecoveryManager {
         int magic = prefix.getInt();
         short version = prefix.getShort();
         int bodyLength = prefix.getInt();
-        if (magic != RecordEncoder.MAGIC || version != RecordEncoder.VERSION || bodyLength < 0) {
+        if (magic != RecordEncoder.MAGIC
+                || version != RecordEncoder.VERSION
+                || bodyLength < RecordEncoder.BODY_FIXED_BYTES
+                || bodyLength > RecordEncoder.MAX_RECORD_BODY_BYTES) {
             return null;
         }
 
@@ -81,7 +84,12 @@ final class RecoveryManager {
     }
 
     private static long migrateLegacyTextLog(Path path, Durability durability) throws IOException {
-        List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            return -1L;
+        }
         List<byte[]> framedRecords = new ArrayList<>();
         long expectedOffset = 0L;
 
@@ -127,5 +135,19 @@ final class RecoveryManager {
             }
         }
         return true;
+    }
+
+    private static boolean startsWithLogStoreMagic(Path path) throws IOException {
+        if (Files.size(path) < Integer.BYTES) {
+            return false;
+        }
+        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
+            ByteBuffer magic = ByteBuffer.allocate(Integer.BYTES);
+            if (!readFullyOrEof(channel, magic)) {
+                return false;
+            }
+            magic.flip();
+            return magic.getInt() == RecordEncoder.MAGIC;
+        }
     }
 }

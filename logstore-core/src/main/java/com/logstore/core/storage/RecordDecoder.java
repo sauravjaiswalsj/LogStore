@@ -18,7 +18,11 @@ final class RecordDecoder {
         int magic = recordBuffer.getInt();
         short version = recordBuffer.getShort();
         int bodyLength = recordBuffer.getInt();
-        if (magic != RecordEncoder.MAGIC || version != RecordEncoder.VERSION || bodyLength < RecordEncoder.BODY_FIXED_BYTES || recordBuffer.remaining() != bodyLength) {
+        if (magic != RecordEncoder.MAGIC
+                || version != RecordEncoder.VERSION
+                || bodyLength < RecordEncoder.BODY_FIXED_BYTES
+                || bodyLength > RecordEncoder.MAX_RECORD_BODY_BYTES
+                || recordBuffer.remaining() != bodyLength) {
             return Optional.empty();
         }
 
@@ -28,7 +32,14 @@ final class RecordDecoder {
         int keyLength = recordBuffer.getInt();
         int valueLength = recordBuffer.getInt();
         int expectedCrc = recordBuffer.getInt();
-        if (streamLength < 0 || keyLength < 0 || valueLength < 0 || streamLength + keyLength + valueLength != recordBuffer.remaining()) {
+        long payloadLength = (long) streamLength + keyLength + valueLength;
+        if (streamLength < 0
+                || keyLength < 0
+                || valueLength < 0
+                || streamLength > RecordEncoder.MAX_FIELD_BYTES
+                || keyLength > RecordEncoder.MAX_FIELD_BYTES
+                || valueLength > RecordEncoder.MAX_FIELD_BYTES
+                || payloadLength != recordBuffer.remaining()) {
             return Optional.empty();
         }
 

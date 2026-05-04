@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -126,6 +127,36 @@ class LogStoreTest {
 
             assertThat(result.offset()).isEqualTo(2L);
             assertThat(reopened.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2", "ORD-3");
+        }
+    }
+
+    @Test
+    void restartRecoveryRejectsOversizedCorruptFrameWithoutAllocating() throws Exception {
+        Path logFile = tempDir.resolve("tablet-0.log");
+        ByteBuffer corruptPrefix = ByteBuffer.allocate(Integer.BYTES + Short.BYTES + Integer.BYTES);
+        corruptPrefix.putInt(0x4c535431);
+        corruptPrefix.putShort((short) 1);
+        corruptPrefix.putInt(Integer.MAX_VALUE);
+        Files.write(logFile, corruptPrefix.array(), StandardOpenOption.CREATE_NEW);
+
+        try (LogStore store = openStore()) {
+            AppendResult result = store.append("orders", "ORD-1", bytes("one"));
+
+            assertThat(result.offset()).isZero();
+            assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1");
+        }
+    }
+
+    @Test
+    void readTabletReturnsRecentRecordsAcrossStreams() {
+        try (LogStore store = openStore()) {
+            store.append("orders", "ORD-1", bytes("one"));
+            store.append("payments", "PAY-1", bytes("paid"));
+
+            List<LogRecord> records = store.readTablet(0, 0, 10);
+
+            assertThat(records).extracting(LogRecord::stream).containsExactly("orders", "payments");
+            assertThat(records).extracting(LogRecord::key).containsExactly("ORD-1", "PAY-1");
         }
     }
 

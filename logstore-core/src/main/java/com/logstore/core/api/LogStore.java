@@ -54,6 +54,20 @@ public final class LogStore implements Closeable {
         }
     }
 
+    public List<LogRecord> readTablet(int tabletId, long offset, int limit) {
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset cannot be negative");
+        }
+        if (limit <= 0) {
+            return List.of();
+        }
+        try {
+            return partitionManager.tabletById(tabletId).readAll(offset, limit);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to read tablet records", ex);
+        }
+    }
+
     public void replay(String stream, long offset, int batchSize, RecordHandler handler) {
         Objects.requireNonNull(handler, "handler");
         if (batchSize <= 0) {
