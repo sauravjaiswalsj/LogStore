@@ -19,3 +19,15 @@ management:
 tablet:
   base-dir: data/logstore/
   total-tablets: 10
+  durability: BATCHED_FSYNC
+  batch-size: 128
+  flush-interval-millis: 5
+  index-interval: 128
+  queue-capacity: 8192
+
+cluster:
+  node-id: ${LOGSTORE_NODE_ID:node-1}
+  leader: ${LOGSTORE_LEADER:true}
+  replication-factor: ${LOGSTORE_REPLICATION_FACTOR:1}
+  ack-mode: ${LOGSTORE_ACK_MODE:LEADER_ONLY}
+  peers: ${LOGSTORE_PEERS:}

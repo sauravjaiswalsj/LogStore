@@ -2,11 +2,13 @@ package com.projects.logstore.controller;
 
 import com.logstore.core.api.LogStore;
 import com.logstore.core.api.TabletInfo;
+import com.projects.logstore.config.ClusterProperties;
 import com.projects.logstore.dto.AppHealthDTO;
 import com.projects.logstore.dto.ClusterOverviewDTO;
 import com.projects.logstore.dto.LogRecord;
 import com.projects.logstore.dto.TabletDetailDTO;
 import com.projects.logstore.dto.TabletSummaryDTO;
+import com.projects.logstore.replication.ReplicationManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,9 +25,13 @@ import java.util.List;
 @RequestMapping("/")
 public class ObservabilityController {
     private final LogStore logStore;
+    private final ClusterProperties clusterProperties;
+    private final ReplicationManager replicationManager;
 
-    public ObservabilityController(LogStore logStore) {
+    public ObservabilityController(LogStore logStore, ClusterProperties clusterProperties, ReplicationManager replicationManager) {
         this.logStore = logStore;
+        this.clusterProperties = clusterProperties;
+        this.replicationManager = replicationManager;
     }
 
     @GetMapping("/health")
@@ -80,12 +86,19 @@ public class ObservabilityController {
     @GetMapping("/cluster")
     public ClusterOverviewDTO cluster() {
         ClusterOverviewDTO dto = new ClusterOverviewDTO();
-        dto.setStatus("DEGRADED");
-        dto.setTopologyMode("single-node / multi-tablet");
-        dto.setLeaderElection("backend pending");
-        dto.setReplication("backend pending");
+        dto.setStatus(clusterProperties.isLeader() ? "UP" : "FOLLOWER");
+        dto.setTopologyMode(clusterProperties.getReplicationFactor() > 1 ? "static leader/follower" : "single-node / multi-tablet");
+        dto.setLeaderElection("manual static leader");
+        dto.setReplication(clusterProperties.getAckMode().name());
         dto.setTotalTablets(logStore.partitionCount());
-        dto.setNote("The UI is cluster-aware, but live leader/follower topology is not exposed by the backend yet.");
+        dto.setNote("V0.3 uses a static configured leader. Automatic leader election is intentionally unsupported.");
+        dto.setNodeId(clusterProperties.getNodeId());
+        dto.setLeader(clusterProperties.isLeader());
+        dto.setAckMode(clusterProperties.getAckMode().name());
+        dto.setReplicationFactor(clusterProperties.getReplicationFactor());
+        dto.setLatestOffset(replicationManager.latestOffset());
+        dto.setCommitOffset(replicationManager.commitOffset());
+        dto.setPeers(clusterProperties.isLeader() ? replicationManager.peerStatuses() : List.of());
         return dto;
     }
 

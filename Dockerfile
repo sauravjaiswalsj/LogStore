@@ -19,7 +19,7 @@ RUN ./mvnw -q -DskipTests package
 FROM eclipse-temurin:23-jre-jammy
 WORKDIR /app
 
-COPY --from=builder /workspace/logstore-server/target/logstore-server-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /workspace/logstore-server/target/logstore-server-0.1.0.jar app.jar
 COPY --from=builder /workspace/data ./data
 
 EXPOSE 8080

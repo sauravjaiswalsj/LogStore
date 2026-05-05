@@ -44,6 +44,19 @@ public final class LogStore implements Closeable {
         }
     }
 
+    public AppendResult appendReplicated(String stream, String key, byte[] value, long offset, long timestamp) {
+        ensureOpen();
+        validateAppend(stream, key, value);
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset cannot be negative");
+        }
+        try {
+            return partitionManager.tabletForStream(stream).appendAt(stream, key, value, offset, timestamp);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to append replicated record", ex);
+        }
+    }
+
     public List<LogRecord> read(String stream, long offset, int limit) {
         ensureOpen();
         validateRead(stream, offset);
@@ -117,6 +130,14 @@ public final class LogStore implements Closeable {
 
     @Override
     public void close() {
+        if (closed) {
+            return;
+        }
+        try {
+            partitionManager.close();
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to close LogStore", ex);
+        }
         closed = true;
     }
 

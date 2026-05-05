@@ -9,4 +9,6 @@ public class AppendDTO {
     String stream;
     int tabletId;
     long offset;
+    boolean committed;
+    int persistedReplicas;
 }
