@@ -144,7 +144,7 @@ The current alpha covers V0.1 through V0.3:
 
 Automatic leader election is intentionally out of scope. Kill-leader behavior is unsupported in this alpha and should be handled manually by changing configuration and restarting nodes.
 
-The protobuf service contract lives at `logstore-server/src/main/proto/logstore.proto`. The runnable alpha transport is the Spring Boot HTTP API used by Docker Compose; generated gRPC server/client bindings are the next hardening step.
+The protobuf service contract lives at `logstore-server/src/main/proto/logstore.proto`. Peer replication uses gRPC for `Replicate`, `FetchFromOffset`, and `ClusterStatus`; Spring HTTP remains the public/demo surface for client appends, reads, health, and UI calls.
 
 ---
 
@@ -248,6 +248,9 @@ Services:
 * Leader node 1: `http://localhost:8080`
 * Follower node 2: `http://localhost:8081`
 * Follower node 3: `http://localhost:8082`
+* gRPC node 1: `localhost:9091`
+* gRPC node 2: `localhost:9092`
+* gRPC node 3: `localhost:9093`
 * UI: `http://localhost:3000`
 
 Append to the leader:
@@ -270,7 +273,7 @@ Check cluster status:
 curl http://localhost:8080/cluster/status
 ```
 
-With `LOGSTORE_ACK_MODE=QUORUM`, the leader returns success after the local write plus at least one follower persist. If one follower is down, appends can continue while quorum is still available. When the follower returns, the leader catch-up path sends missing tablet records before retrying the current replication.
+With `LOGSTORE_ACK_MODE=QUORUM`, the leader returns success after the local write plus at least one follower persist over gRPC. If one follower is down, appends can continue while quorum is still available. When the follower returns, it pulls missing records from the leader with `FetchFromOffset`; the leader also catch-ups lagging followers before retrying a current replication.
 
 ---
 
@@ -375,16 +378,13 @@ LogStore/
 * Java NIO `FileChannel`
 * Next.js operator UI
 * Docker / Render deployment
+* gRPC / Protobuf replication transport
 
 ---
 
 ## Roadmap
 
 * automatic leader election
-* static replicated alpha mode
-* gRPC/Protobuf transport
-* batched fsync durability mode
-* async flush durability mode
 * persistent index files
 * log compaction
 * snapshots

@@ -1,9 +1,12 @@
 package com.projects.logstore.replication;
 
 import com.logstore.core.api.AppendResult;
+import com.logstore.core.api.LogRecord;
 import com.logstore.core.api.LogStore;
+import com.logstore.core.api.TabletInfo;
 import com.projects.logstore.cluster.AckMode;
 import com.projects.logstore.config.ClusterProperties;
+import com.projects.logstore.dto.FetchRecordsDTO;
 import com.projects.logstore.dto.PeerStatusDTO;
 import com.projects.logstore.dto.ReplicationRecordDTO;
 import com.projects.logstore.dto.ReplicationResultDTO;
@@ -16,11 +19,11 @@ import java.util.List;
 @Component
 public class ReplicationManager {
     private final ClusterProperties clusterProperties;
-    private final ReplicationClient client;
+    private final ReplicationPeerClient client;
     private final LogStore logStore;
     private volatile long commitOffset = -1L;
 
-    public ReplicationManager(ClusterProperties clusterProperties, ReplicationClient client, LogStore logStore) {
+    public ReplicationManager(ClusterProperties clusterProperties, ReplicationPeerClient client, LogStore logStore) {
         this.clusterProperties = clusterProperties;
         this.client = client;
         this.logStore = logStore;
@@ -124,6 +127,56 @@ public class ReplicationManager {
         return result;
     }
 
+    public FetchRecordsDTO fetchFromOffset(int tabletId, long offset, int limit) {
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset cannot be negative");
+        }
+        int resolvedLimit = limit <= 0 ? clusterProperties.getCatchUpBatchSize() : limit;
+        List<ReplicationRecordDTO> records = logStore.readTabletForAdmin(tabletId, offset, resolvedLimit).stream()
+                .map(ReplicationManager::toReplicationRecord)
+                .toList();
+        FetchRecordsDTO dto = new FetchRecordsDTO();
+        dto.setTabletId(tabletId);
+        dto.setOffset(offset);
+        dto.setLimit(resolvedLimit);
+        dto.setRecords(records);
+        dto.setNextOffset(records.isEmpty() ? offset : records.get(records.size() - 1).getOffset() + 1L);
+        return dto;
+    }
+
+    public CatchUpResult catchUpFromLeader() {
+        if (clusterProperties.isLeader() || !clusterProperties.isFollowerCatchUpEnabled()) {
+            return new CatchUpResult(false, 0, "not a follower catch-up node");
+        }
+        String leaderUrl = resolveLeaderUrl();
+        if (leaderUrl.isBlank()) {
+            return new CatchUpResult(false, 0, "leader URL is not configured");
+        }
+
+        int applied = 0;
+        for (TabletInfo tablet : logStore.tablets()) {
+            long nextOffset = tablet.nextOffset();
+            while (true) {
+                FetchRecordsDTO batch = client.fetchFromOffset(leaderUrl, tablet.tabletId(), nextOffset, clusterProperties.getCatchUpBatchSize());
+                if (batch == null || batch.getRecords() == null || batch.getRecords().isEmpty()) {
+                    break;
+                }
+                for (ReplicationRecordDTO record : batch.getRecords()) {
+                    ReplicationResultDTO append = appendFromLeader(record);
+                    if (!append.isSuccess()) {
+                        return new CatchUpResult(false, applied, append.getMessage());
+                    }
+                    applied++;
+                    nextOffset = record.getOffset() + 1L;
+                }
+                if (batch.getRecords().size() < clusterProperties.getCatchUpBatchSize()) {
+                    break;
+                }
+            }
+        }
+        return new CatchUpResult(true, applied, "caught up");
+    }
+
     public List<PeerStatusDTO> peerStatuses() {
         List<PeerStatusDTO> statuses = new ArrayList<>();
         long leaderLatest = latestOffset();
@@ -158,18 +211,32 @@ public class ReplicationManager {
             if (record.offset() >= throughOffset) {
                 break;
             }
-            ReplicationRecordDTO dto = new ReplicationRecordDTO();
-            dto.setStream(record.stream());
-            dto.setKey(record.key());
-            dto.setValue(new String(record.value(), StandardCharsets.UTF_8));
-            dto.setOffset(record.offset());
-            dto.setTimestamp(record.timestamp());
-            client.replicate(peer, dto);
+            client.replicate(peer, toReplicationRecord(record));
             sent++;
         }
         return sent;
     }
 
+    private String resolveLeaderUrl() {
+        if (clusterProperties.getLeaderUrl() != null && !clusterProperties.getLeaderUrl().isBlank()) {
+            return clusterProperties.getLeaderUrl();
+        }
+        return clusterProperties.getPeers().stream().findFirst().orElse("");
+    }
+
+    private static ReplicationRecordDTO toReplicationRecord(LogRecord record) {
+        ReplicationRecordDTO dto = new ReplicationRecordDTO();
+        dto.setStream(record.stream());
+        dto.setKey(record.key());
+        dto.setValue(new String(record.value(), StandardCharsets.UTF_8));
+        dto.setOffset(record.offset());
+        dto.setTimestamp(record.timestamp());
+        return dto;
+    }
+
     public record ReplicationOutcome(boolean success, int persistedReplicas, List<PeerStatusDTO> peers) {
+    }
+
+    public record CatchUpResult(boolean success, int appliedRecords, String message) {
     }
 }

@@ -31,3 +31,9 @@ cluster:
   replication-factor: ${LOGSTORE_REPLICATION_FACTOR:1}
   ack-mode: ${LOGSTORE_ACK_MODE:LEADER_ONLY}
   peers: ${LOGSTORE_PEERS:}
+  leader-url: ${LOGSTORE_LEADER_URL:}
+  grpc-port: ${LOGSTORE_GRPC_PORT:9091}
+  grpc-enabled: ${LOGSTORE_GRPC_ENABLED:true}
+  follower-catch-up-enabled: ${LOGSTORE_FOLLOWER_CATCH_UP_ENABLED:true}
+  catch-up-batch-size: ${LOGSTORE_CATCH_UP_BATCH_SIZE:1000}
+  catch-up-interval-millis: ${LOGSTORE_CATCH_UP_INTERVAL_MILLIS:2000}

@@ -17,4 +17,10 @@ public class ClusterProperties {
     private int replicationFactor = 1;
     private AckMode ackMode = AckMode.LEADER_ONLY;
     private List<String> peers = new ArrayList<>();
+    private String leaderUrl = "";
+    private int grpcPort = 9091;
+    private boolean grpcEnabled = true;
+    private boolean followerCatchUpEnabled = true;
+    private int catchUpBatchSize = 1000;
+    private long catchUpIntervalMillis = 2000L;
 }

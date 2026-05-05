@@ -5,7 +5,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(properties = {
         "tablet.base-dir=target/logstore-spring-context-test/",
-        "tablet.total-tablets=2"
+        "tablet.total-tablets=2",
+        "cluster.grpc-enabled=false"
 })
 class LogStoreApplicationTests {
 

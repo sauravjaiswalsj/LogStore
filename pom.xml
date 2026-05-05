@@ -52,6 +52,8 @@
     <properties>
         <java.version>23</java.version>
         <lombok.version>1.18.38</lombok.version>
+        <grpc.version>1.66.0</grpc.version>
+        <protobuf.version>3.25.5</protobuf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.deploy.skip>true</maven.deploy.skip>
