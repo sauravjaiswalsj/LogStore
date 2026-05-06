@@ -11,4 +11,18 @@ public class TabletProperties {
     private String baseDir;
 
     private int totalTablets;
+
+    private String durability = "FSYNC_EVERY_WRITE";
+
+    private int batchSize = 128;
+
+    private long flushIntervalMillis = 5L;
+
+    private int indexInterval = 128;
+
+    private long maxSegmentBytes = Long.MAX_VALUE;
+
+    private int queueCapacity = 8192;
+
+    private String backpressurePolicy = "BLOCK";
 }

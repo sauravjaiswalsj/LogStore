@@ -18,7 +18,7 @@ public final class PartitionManager {
         }
         this.tablets = new Tablet[config.partitions()];
         for (int i = 0; i < tablets.length; i++) {
-            tablets[i] = new Tablet(i, config.dataDir(), config.durability(), clock);
+            tablets[i] = new Tablet(i, config, clock);
         }
     }
 
@@ -47,5 +47,23 @@ public final class PartitionManager {
             infos.add(new TabletInfo(tablet.tabletId(), tablet.nextOffset(), tablet.latestOffset(), tablet.sizeBytes()));
         }
         return infos;
+    }
+
+    public void close() throws IOException {
+        IOException failure = null;
+        for (Tablet tablet : tablets) {
+            try {
+                tablet.close();
+            } catch (IOException ex) {
+                if (failure == null) {
+                    failure = ex;
+                } else {
+                    failure.addSuppressed(ex);
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure;
+        }
     }
 }

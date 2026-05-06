@@ -1,5 +1,6 @@
 package com.projects.logstore.config;
 
+import com.logstore.core.api.BackpressurePolicy;
 import com.logstore.core.api.Durability;
 import com.logstore.core.api.LogStore;
 import com.logstore.core.api.LogStoreConfig;
@@ -21,7 +22,13 @@ public class TabletConfig {
         return LogStore.open(LogStoreConfig.builder()
                 .dataDir(Path.of(tabletProperties.getBaseDir()))
                 .partitions(tabletProperties.getTotalTablets())
-                .durability(Durability.FSYNC_EVERY_WRITE)
+                .durability(Durability.valueOf(tabletProperties.getDurability()))
+                .batchSize(tabletProperties.getBatchSize())
+                .flushIntervalMillis(tabletProperties.getFlushIntervalMillis())
+                .indexInterval(tabletProperties.getIndexInterval())
+                .maxSegmentBytes(tabletProperties.getMaxSegmentBytes())
+                .queueCapacity(tabletProperties.getQueueCapacity())
+                .backpressurePolicy(BackpressurePolicy.valueOf(tabletProperties.getBackpressurePolicy()))
                 .build());
     }
 }

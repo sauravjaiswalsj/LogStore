@@ -13,33 +13,41 @@ export function ClusterTopology({
     <div className="grid grid--2">
       <Panel
         title="Topology posture"
-        description="The visual language is ready for cluster mode, but the backend is still exposing a single-node shape."
+        description="Static V0.3 cluster state from the configured leader and followers."
         action={<StatusPill status={cluster?.status ?? "pending"} />}
       >
         <div className="timeline">
           <div className="timeline-item">
-            <strong className="mono">{cluster?.topologyMode ?? "backend pending"}</strong>
-            <p>Current tablets: {totalTablets}</p>
+            <strong className="mono">{cluster?.nodeId ?? "backend pending"}</strong>
+            <p>{cluster?.leader ? "Leader" : "Follower"} · {cluster?.topologyMode ?? "pending"} · tablets: {totalTablets}</p>
           </div>
           <div className="timeline-item">
-            <strong className="mono">Leader election: {cluster?.leaderElection ?? "pending"}</strong>
-            <p>Election transitions will land here once node roles and votes are surfaced by the Java service.</p>
+            <strong className="mono">Ack mode: {cluster?.ackMode ?? "pending"}</strong>
+            <p>Replication factor: {cluster?.replicationFactor ?? 1} · commit offset: {cluster?.commitOffset ?? -1}</p>
           </div>
           <div className="timeline-item">
-            <strong className="mono">Replication: {cluster?.replication ?? "pending"}</strong>
-            <p>Follower lag, quorum health, and leader ownership remain explicitly marked as pending.</p>
+            <strong className="mono">Latest offset: {cluster?.latestOffset ?? -1}</strong>
+            <p>Leader election: {cluster?.leaderElection ?? "manual static leader"}</p>
           </div>
         </div>
       </Panel>
 
       <Panel
-        title="Intentional placeholders"
-        description="These are not fake metrics. They mark where the next backend integrations belong."
+        title="Follower lag"
+        description="Peer health is sampled from each follower's cluster status endpoint."
       >
-        <div className="callout">
-          {cluster?.note ??
-            "Cluster metadata is not yet live. The interface reserves space for leader/follower topology, election state, and lag once the service exposes those facts."}
-        </div>
+        {cluster?.peers?.length ? (
+          <div className="timeline">
+            {cluster.peers.map((peer) => (
+              <div className="timeline-item" key={peer.peer}>
+                <strong className="mono">{peer.peer}</strong>
+                <p>{peer.healthy ? "healthy" : "unreachable"} · latest offset: {peer.latestOffset} · lag: {peer.lag}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="callout">{cluster?.note ?? "No follower peers configured."}</div>
+        )}
       </Panel>
     </div>
   );

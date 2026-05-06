@@ -1,20 +1,67 @@
 services:
-  backend:
+  logstore-node-1:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      PORT: 8080
+      LOGSTORE_NODE_ID: node-1
+      LOGSTORE_LEADER: "true"
+      LOGSTORE_REPLICATION_FACTOR: 3
+      LOGSTORE_ACK_MODE: QUORUM
+      LOGSTORE_PEERS: logstore-node-2:9091,logstore-node-3:9091
+      LOGSTORE_GRPC_PORT: 9091
     ports:
       - "8080:8080"
+      - "9091:9091"
     volumes:
-      - ./data/logstore:/app/data/logstore
+      - ./data/node-1:/app/data/logstore
+
+  logstore-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: 8080
+      LOGSTORE_NODE_ID: node-2
+      LOGSTORE_LEADER: "false"
+      LOGSTORE_REPLICATION_FACTOR: 3
+      LOGSTORE_ACK_MODE: QUORUM
+      LOGSTORE_PEERS: logstore-node-1:9091,logstore-node-3:9091
+      LOGSTORE_LEADER_URL: logstore-node-1:9091
+      LOGSTORE_GRPC_PORT: 9091
+    ports:
+      - "8081:8080"
+      - "9092:9091"
+    volumes:
+      - ./data/node-2:/app/data/logstore
+
+  logstore-node-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: 8080
+      LOGSTORE_NODE_ID: node-3
+      LOGSTORE_LEADER: "false"
+      LOGSTORE_REPLICATION_FACTOR: 3
+      LOGSTORE_ACK_MODE: QUORUM
+      LOGSTORE_PEERS: logstore-node-1:9091,logstore-node-2:9091
+      LOGSTORE_LEADER_URL: logstore-node-1:9091
+      LOGSTORE_GRPC_PORT: 9091
+    ports:
+      - "8082:8080"
+      - "9093:9091"
+    volumes:
+      - ./data/node-3:/app/data/logstore
 
   ui:
     build:
       context: ./ui
       dockerfile: Dockerfile
     environment:
-      LOGSTORE_API_BASE_URL: http://backend:8080
+      LOGSTORE_API_BASE_URL: http://logstore-node-1:8080
     depends_on:
-      - backend
+      - logstore-node-1
     ports:
       - "3000:3000"

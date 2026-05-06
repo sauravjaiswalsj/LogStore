@@ -135,6 +135,7 @@ export function ReadConsole({ detail }: { detail: TabletDetail }) {
               <thead>
                 <tr>
                   <th>Offset</th>
+                  <th>Stream</th>
                   <th>Timestamp</th>
                   <th>Key</th>
                   <th>Value</th>
@@ -144,6 +145,7 @@ export function ReadConsole({ detail }: { detail: TabletDetail }) {
                 {records.map((record) => (
                   <tr key={`${record.offset}-${record.timestamp}`}>
                     <td className="mono">{record.offset}</td>
+                    <td className="mono">{record.stream ?? stream}</td>
                     <td>{formatDateTime(record.timestamp)}</td>
                     <td className="mono">{record.key}</td>
                     <td>

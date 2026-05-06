@@ -10,4 +10,11 @@ public class ClusterOverviewDTO {
     private String replication;
     private int totalTablets;
     private String note;
+    private String nodeId;
+    private boolean leader;
+    private String ackMode;
+    private int replicationFactor;
+    private long latestOffset;
+    private long commitOffset;
+    private java.util.List<PeerStatusDTO> peers;
 }

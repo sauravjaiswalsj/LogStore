@@ -17,12 +17,16 @@ final class RecoveryManager {
     }
 
     static long recoverNextOffset(Path path, Durability durability) throws IOException {
+        return recoverNextOffset(path, durability, 0L);
+    }
+
+    static long recoverNextOffset(Path path, Durability durability, long firstExpectedOffset) throws IOException {
         if (!Files.exists(path)) {
-            return 0L;
+            return firstExpectedOffset;
         }
 
         long validBytes = 0L;
-        long expectedOffset = 0L;
+        long expectedOffset = firstExpectedOffset;
         try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
             while (true) {
                 long recordStart = channel.position();

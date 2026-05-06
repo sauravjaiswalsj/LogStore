@@ -30,9 +30,9 @@ LogStore sits between them:
 |---|---:|---:|---|
 | Apache Kafka | No | Yes | Large-scale event streaming |
 | Chronicle Queue | Yes | No | Low-latency local persisted queues |
-| LogStore | Yes | Planned | Embedded durable logs before full streaming infrastructure |
+| LogStore | Yes | Static alpha demo | Embedded durable logs with optional static replication |
 
-LogStore is not a Kafka replacement. It is an embedded commit log for applications that want durable, replayable event storage before they need full streaming infrastructure.
+LogStore is not a Kafka replacement. It is an embedded commit log for applications that want durable, replayable event storage, with an experimental static leader/follower replication demo for local alpha testing.
 
 ---
 
@@ -45,10 +45,14 @@ LogStore is not a Kafka replacement. It is an embedded commit log for applicatio
 * Partitioned storage using tablets
 * Binary framed record format with CRC validation
 * Startup recovery from existing log files
-* Per-tablet single-writer concurrency model
-* `FSYNC_EVERY_WRITE` durability
+* Persistent consumer cursors for poll/commit workflows
+* Per-tablet persistent single-writer pipeline
+* `FSYNC_EVERY_WRITE`, `BATCHED_FSYNC`, and `ASYNC_FLUSH` durability modes
+* Bounded append queues with block/reject backpressure
+* Sparse offset index for faster reads from known offsets
 * Persistent disk-backed storage
 * Spring Boot server wrapper
+* Static 3-node replication demo with leader/follower log shipping and quorum ack
 * Operator UI for inspecting tablets, offsets, and cluster state
 
 ---
@@ -70,7 +74,9 @@ import java.util.List;
 LogStore store = LogStore.open(LogStoreConfig.builder()
     .dataDir(Path.of("./data/logstore"))
     .partitions(16)
-    .durability(Durability.FSYNC_EVERY_WRITE)
+    .durability(Durability.BATCHED_FSYNC)
+    .batchSize(128)
+    .flushIntervalMillis(5)
     .build());
 
 AppendResult result = store.append(
@@ -127,12 +133,41 @@ Read records:
 GET /read?stream=orders&offset=0&limit=100
 ```
 
+Poll records for a consumer group:
+
+```http
+GET /consume?stream=orders&consumerGroup=billing-worker&limit=100
+```
+
+Commit the next offset after processing:
+
+```http
+POST /consume/commit
+Content-Type: application/json
+
+{
+  "stream": "orders",
+  "consumerGroup": "billing-worker",
+  "nextOffset": 43
+}
+```
+
 ---
 
 ## Alpha Scope
 
-The current alpha is V0.1 embedded core. Static replication, gRPC, leader/follower log shipping,
-batched fsync, segment rolling, sparse indexes, and benchmark claims are planned follow-up work.
+The current alpha covers V0.1 through V0.3:
+
+* V0.1: embedded append/read/replay, framed records, restart recovery, and Spring Boot integration.
+* V0.1+: persistent consumer cursors for MQ-style poll/commit readers.
+* V0.2: persistent per-tablet writers, batched fsync, async flush mode, sparse offset indexes, bounded queues, basic segment rolling, and JMH benchmark scaffolding.
+* V0.3: static leader/follower replication demo with quorum acknowledgement and follower catch-up over gRPC.
+
+Automatic leader election is intentionally out of scope. Kill-leader behavior is unsupported in this alpha and should be handled manually by changing configuration and restarting nodes.
+
+No throughput number is published as a product claim yet. Benchmarks exist so local runs can produce honest numbers with machine, JVM, payload size, partitions, and durability mode.
+
+The protobuf service contract lives at `logstore-server/src/main/proto/logstore.proto`. Peer replication uses gRPC for `Replicate`, `FetchFromOffset`, and `ClusterStatus`; Spring HTTP remains the public/demo surface for client appends, reads, health, and UI calls.
 
 ---
 
@@ -168,10 +203,10 @@ Normal users interact with streams and offsets. Tablets and segments are interna
 
 ### Concurrency Model
 
-LogStore serializes append operations per tablet:
+LogStore serializes append operations through a persistent writer per tablet:
 
 ```text
-caller threads -> synchronized tablet append -> disk
+caller threads -> bounded tablet queue -> single tablet writer -> persistent FileChannel
 ```
 
 This preserves ordering within a tablet while allowing parallel writes across tablets.
@@ -195,27 +230,37 @@ This format supports:
 
 ## Durability
 
-V0.1 implements one durability behavior:
-
 | Mode | Description | Use Case |
 |---|---|---|
 | `FSYNC_EVERY_WRITE` | Force data to disk on every append | strongest local durability |
-
-`BATCHED_FSYNC` and `ASYNC_FLUSH` remain in the enum as V0.2 placeholders. In V0.1 they are accepted
-by configuration but behave like `FSYNC_EVERY_WRITE`.
+| `BATCHED_FSYNC` | Force after `batchSize` records or `flushIntervalMillis` | benchmark/default alpha performance mode |
+| `ASYNC_FLUSH` | Write through the OS page cache without forcing each append | highest throughput, weakest crash durability |
 
 ---
 
 ## Benchmarks
 
-Benchmarks are not published yet. No throughput number should be treated as a claim until it includes
-the command, machine, JVM version, payload size, partitions, and durability mode.
+Build and run the JMH benchmark:
 
----
+```bash
+./mvnw -pl logstore-benchmarks -am test-compile dependency:build-classpath \
+  -Dmdep.outputFile=logstore-benchmarks/target/classpath.txt
+java -cp "logstore-benchmarks/target/classes:$(cat logstore-benchmarks/target/classpath.txt)" \
+  org.openjdk.jmh.Main EmbeddedAppendBenchmark
+```
 
-## Docker
+No throughput number should be treated as a claim until it includes the command, machine, JVM version,
+payload size, partitions, and durability mode.
 
-Run the backend and UI:
+| Benchmark | Status |
+|---|---|
+| Embedded append JMH | implemented |
+| HTTP append benchmark | planned |
+| Published throughput table | pending local measured run |
+
+## Static Replication Demo
+
+The V0.3 demo uses a static leader and two followers:
 
 ```bash
 docker compose up --build
@@ -223,11 +268,47 @@ docker compose up --build
 
 Services:
 
-* Backend: `http://localhost:8080`
-* Swagger: `http://localhost:8080/swagger-ui.html`
+* Leader node 1: `http://localhost:8080`
+* Follower node 2: `http://localhost:8081`
+* Follower node 3: `http://localhost:8082`
+* gRPC node 1: `localhost:9091`
+* gRPC node 2: `localhost:9092`
+* gRPC node 3: `localhost:9093`
 * UI: `http://localhost:3000`
 
-The UI talks to the backend through `LOGSTORE_API_BASE_URL=http://backend:8080`.
+Append to the leader:
+
+```bash
+curl -X POST http://localhost:8080/append \
+  -H 'Content-Type: application/json' \
+  -d '{"stream":"orders","key":"ORD-1","value":"created"}'
+```
+
+Read from a follower:
+
+```bash
+curl 'http://localhost:8081/read?stream=orders&offset=0&limit=10'
+```
+
+Check cluster status:
+
+```bash
+curl http://localhost:8080/cluster/status
+```
+
+With `LOGSTORE_ACK_MODE=QUORUM`, the leader returns success after the local write plus at least one follower persist over gRPC. If one follower is down, appends can continue while quorum is still available. When the follower returns, it pulls missing records from the leader with `FetchFromOffset`; the leader also catch-ups lagging followers before retrying a current replication.
+
+---
+
+## Docker
+
+Run the 3-node alpha cluster and UI:
+
+```bash
+docker compose up --build
+```
+
+The UI talks to node 1 through `LOGSTORE_API_BASE_URL=http://logstore-node-1:8080`.
 
 ---
 
@@ -301,7 +382,7 @@ LogStore/
 │       ├── server        # Spring Boot-facing services
 │       ├── replication   # distributed alpha components
 │       └── cluster       # cluster metadata and health
-├── logstore-benchmarks   # benchmark module placeholder
+├── logstore-benchmarks   # JMH embedded benchmarks
 ├── script                # load and stress tests
 ├── ui                    # Next.js operator console
 ├── data/logstore         # local log data
@@ -320,20 +401,16 @@ LogStore/
 * Java NIO `FileChannel`
 * Next.js operator UI
 * Docker / Render deployment
+* gRPC / Protobuf replication transport
 
 ---
 
 ## Roadmap
 
 * automatic leader election
-* static replicated alpha mode
-* gRPC/Protobuf transport
-* batched fsync durability mode
-* async flush durability mode
 * persistent index files
 * log compaction
 * snapshots
-* consumer cursors
 * Java client artifact
 * Spring Boot starter
 * Go/Rust clients over gRPC

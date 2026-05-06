@@ -45,12 +45,39 @@ export type ClusterOverview = {
   replication: string;
   totalTablets: number;
   note: string;
+  nodeId?: string;
+  leader?: boolean;
+  ackMode?: string;
+  replicationFactor?: number;
+  latestOffset?: number;
+  commitOffset?: number;
+  peers?: PeerStatus[];
+};
+
+export type PeerStatus = {
+  peer: string;
+  healthy: boolean;
+  latestOffset: number;
+  lag: number;
+  message?: string;
 };
 
 export type AppendResult = {
   stream: string;
   tabletId: number;
   offset: number;
+  committed: boolean;
+  persistedReplicas: number;
+};
+
+export type ConsumerBatch = {
+  stream: string;
+  consumerGroup: string;
+  tabletId: number;
+  offset: number;
+  nextOffset: number;
+  limit: number;
+  records: LogRecord[];
 };
 
 export type ReadResult = {

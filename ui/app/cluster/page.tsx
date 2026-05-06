@@ -16,29 +16,29 @@ export default async function ClusterPage() {
     <div className="grid">
       <PageHeader
         aside={<StatusPill status={cluster?.status ?? "pending"} />}
-        description="The UI reserves space for leadership, replication, and election state without pretending those signals exist before the backend does."
+        description="Static leader/follower replication state for the V0.3 alpha."
         eyebrow="cluster / topology"
-        title="Topology with honest gaps"
+        title="Cluster topology"
       />
 
       <ClusterTopology cluster={cluster} totalTablets={health?.totalTablets ?? 0} />
 
       <Panel
-        title="Planned next interfaces"
-        description="The frontend is ready to absorb richer cluster state as soon as the service exposes it."
+        title="V0.3 boundary"
+        description="The alpha demonstrates replication without automatic leader election."
       >
         <div className="timeline">
           <div className="timeline-item">
-            <strong className="mono">leader assignments per tablet</strong>
-            <p>Show ownership, failover, and replica followers for every partition.</p>
+            <strong className="mono">leader</strong>
+            <p>{cluster?.nodeId ?? "node-1"} is configured statically.</p>
           </div>
           <div className="timeline-item">
-            <strong className="mono">replication lag and ack state</strong>
-            <p>Render lag heatmaps and warnings rather than static placeholder badges.</p>
+            <strong className="mono">quorum</strong>
+            <p>Leader plus one follower is enough when replication factor is three.</p>
           </div>
           <div className="timeline-item">
-            <strong className="mono">election state transitions</strong>
-            <p>Expose candidate, follower, and leader movement in a time-based event stream.</p>
+            <strong className="mono">failover</strong>
+            <p>Leader failover remains manual and unsupported in this alpha.</p>
           </div>
         </div>
       </Panel>

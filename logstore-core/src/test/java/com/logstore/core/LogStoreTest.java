@@ -97,6 +97,32 @@ class LogStoreTest {
     }
 
     @Test
+    void consumerPollCommitAndRestartResumeFromPersistedCursor() {
+        try (LogStore store = openStore()) {
+            store.append("orders", "ORD-1", bytes("one"));
+            store.append("orders", "ORD-2", bytes("two"));
+            store.append("orders", "ORD-3", bytes("three"));
+
+            ConsumerBatch first = store.poll("orders", "billing-worker", 2);
+
+            assertThat(first.offset()).isZero();
+            assertThat(first.nextOffset()).isEqualTo(2L);
+            assertThat(first.records()).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2");
+
+            store.commit("orders", "billing-worker", first.nextOffset());
+            assertThat(store.committedOffset("orders", "billing-worker")).isEqualTo(2L);
+        }
+
+        try (LogStore reopened = openStore()) {
+            ConsumerBatch second = reopened.poll("orders", "billing-worker", 10);
+
+            assertThat(second.offset()).isEqualTo(2L);
+            assertThat(second.nextOffset()).isEqualTo(3L);
+            assertThat(second.records()).extracting(LogRecord::key).containsExactly("ORD-3");
+        }
+    }
+
+    @Test
     void restartRecoveryResumesAtNextValidOffset() {
         try (LogStore store = openStore()) {
             store.append("orders", "ORD-1", bytes("one"));
@@ -194,7 +220,7 @@ class LogStoreTest {
     }
 
     @Test
-    void plannedDurabilityModesCurrentlyBehaveLikeFsyncEveryWrite() {
+    void v02DurabilityModesAppendAndRead() {
         for (Durability durability : List.of(Durability.BATCHED_FSYNC, Durability.ASYNC_FLUSH)) {
             try (LogStore store = LogStore.open(LogStoreConfig.builder()
                     .dataDir(tempDir.resolve(durability.name()))
@@ -206,6 +232,41 @@ class LogStoreTest {
                 assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1");
             }
         }
+    }
+
+    @Test
+    void replicatedAppendRequiresExpectedOffset() {
+        try (LogStore store = openStore()) {
+            store.appendReplicated("orders", "ORD-1", bytes("one"), 0L, 1734150400123L);
+
+            assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key).containsExactly("ORD-1");
+            assertThatThrownBy(() -> store.appendReplicated("orders", "ORD-3", bytes("three"), 3L, 1734150400124L))
+                    .isInstanceOf(java.io.UncheckedIOException.class)
+                    .hasCauseInstanceOf(java.io.IOException.class)
+                    .cause()
+                    .hasMessageContaining("out-of-order append");
+        }
+    }
+
+    @Test
+    void rollsSegmentsByBaseOffsetAndReadsAcrossSegments() throws Exception {
+        try (LogStore store = LogStore.open(LogStoreConfig.builder()
+                .dataDir(tempDir)
+                .partitions(1)
+                .durability(Durability.ASYNC_FLUSH)
+                .maxSegmentBytes(90)
+                .indexInterval(1)
+                .build())) {
+            store.append("orders", "ORD-1", bytes("one"));
+            store.append("orders", "ORD-2", bytes("two"));
+            store.append("orders", "ORD-3", bytes("three"));
+
+            assertThat(store.read("orders", 0, 10)).extracting(LogRecord::key)
+                    .containsExactly("ORD-1", "ORD-2", "ORD-3");
+        }
+
+        assertThat(Files.list(tempDir.resolve("tablet-0")).map(path -> path.getFileName().toString()).toList())
+                .contains("00000000000000000000.log", "00000000000000000001.log");
     }
 
     @Test
