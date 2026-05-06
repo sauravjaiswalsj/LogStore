@@ -5,14 +5,12 @@ import {
   TabletDetail,
   TabletSummary
 } from "@/lib/types";
-
-const API_BASE_URL =
-  process.env.LOGSTORE_API_BASE_URL ??
-  (process.env.LOGSTORE_API_HOSTPORT
-    ? `http://${process.env.LOGSTORE_API_HOSTPORT}`
-    : "http://127.0.0.1:8080");
+import { API_BASE_URL } from "@/lib/backend";
+import { touchBackendHealthKeepalive } from "@/lib/health-keepalive";
 
 async function fetchJson<T>(path: string): Promise<T | null> {
+  touchBackendHealthKeepalive();
+
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       cache: "no-store"

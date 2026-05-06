@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL =
-  process.env.LOGSTORE_API_BASE_URL ??
-  (process.env.LOGSTORE_API_HOSTPORT
-    ? `http://${process.env.LOGSTORE_API_HOSTPORT}`
-    : "http://127.0.0.1:8080");
+import { API_BASE_URL } from "@/lib/backend";
+import { touchBackendHealthKeepalive } from "@/lib/health-keepalive";
 
 export async function GET(request: NextRequest) {
+  touchBackendHealthKeepalive();
+
   try {
     const url = new URL(request.url);
     const response = await fetch(`${API_BASE_URL}/read?${url.searchParams.toString()}`, {

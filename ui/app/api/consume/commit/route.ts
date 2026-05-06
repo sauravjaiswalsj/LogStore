@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_BASE_URL =
-  process.env.LOGSTORE_API_BASE_URL ??
-  (process.env.LOGSTORE_API_HOSTPORT
-    ? `http://${process.env.LOGSTORE_API_HOSTPORT}`
-    : "http://127.0.0.1:8080");
+import { API_BASE_URL } from "@/lib/backend";
+import { touchBackendHealthKeepalive } from "@/lib/health-keepalive";
 
 export async function POST(request: NextRequest) {
+  touchBackendHealthKeepalive();
+
   try {
     const body = await request.json();
     const response = await fetch(`${API_BASE_URL}/consume/commit`, {
