@@ -1,6 +1,7 @@
 package com.logstore.core.api;
 
 import com.logstore.core.storage.PartitionManager;
+import com.logstore.core.storage.CursorStore;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -12,10 +13,12 @@ import java.util.Objects;
 
 public final class LogStore implements Closeable {
     private final PartitionManager partitionManager;
+    private final CursorStore cursorStore;
     private boolean closed;
 
     private LogStore(LogStoreConfig config, Clock clock) throws IOException {
         this.partitionManager = new PartitionManager(config, clock);
+        this.cursorStore = new CursorStore(config.dataDir());
     }
 
     public static LogStore open(String dataDir) {
@@ -108,6 +111,49 @@ public final class LogStore implements Closeable {
         }
     }
 
+    public ConsumerBatch poll(String stream, String consumerGroup, int limit) {
+        ensureOpen();
+        validateStream(stream);
+        validateConsumerGroup(consumerGroup);
+        if (limit <= 0) {
+            long offset = committedOffset(stream, consumerGroup);
+            return new ConsumerBatch(stream, consumerGroup, offset, offset, List.of());
+        }
+        try {
+            long offset = cursorStore.offset(stream, consumerGroup);
+            List<LogRecord> records = read(stream, offset, limit);
+            long nextOffset = records.isEmpty() ? offset : records.get(records.size() - 1).offset() + 1L;
+            return new ConsumerBatch(stream, consumerGroup, offset, nextOffset, records);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to poll consumer batch", ex);
+        }
+    }
+
+    public void commit(String stream, String consumerGroup, long nextOffset) {
+        ensureOpen();
+        validateStream(stream);
+        validateConsumerGroup(consumerGroup);
+        if (nextOffset < 0) {
+            throw new IllegalArgumentException("nextOffset cannot be negative");
+        }
+        try {
+            cursorStore.commit(stream, consumerGroup, nextOffset);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to commit consumer cursor", ex);
+        }
+    }
+
+    public long committedOffset(String stream, String consumerGroup) {
+        ensureOpen();
+        validateStream(stream);
+        validateConsumerGroup(consumerGroup);
+        try {
+            return cursorStore.offset(stream, consumerGroup);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to read consumer cursor", ex);
+        }
+    }
+
     public int tabletForStreamId(String stream) {
         ensureOpen();
         validateStream(stream);
@@ -159,6 +205,12 @@ public final class LogStore implements Closeable {
     private static void validateStream(String stream) {
         if (stream == null || stream.isBlank()) {
             throw new IllegalArgumentException("stream cannot be null or blank");
+        }
+    }
+
+    private static void validateConsumerGroup(String consumerGroup) {
+        if (consumerGroup == null || consumerGroup.isBlank()) {
+            throw new IllegalArgumentException("consumerGroup cannot be null or blank");
         }
     }
 

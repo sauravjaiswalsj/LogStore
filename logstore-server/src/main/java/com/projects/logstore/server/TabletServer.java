@@ -3,6 +3,7 @@ package com.projects.logstore.server;
 import com.logstore.core.api.AppendResult;
 import com.logstore.core.api.LogStore;
 import com.projects.logstore.dto.AppendDTO;
+import com.projects.logstore.dto.ConsumerBatchDTO;
 import com.projects.logstore.dto.LogRecord;
 import com.projects.logstore.dto.ReadDTO;
 import com.projects.logstore.model.Data;
@@ -57,8 +58,27 @@ public class TabletServer {
         return readDTO;
     }
 
+    public ConsumerBatchDTO poll(String stream, String consumerGroup, int limit) {
+        com.logstore.core.api.ConsumerBatch batch = logStore.poll(stream, consumerGroup, limit);
+        ConsumerBatchDTO dto = new ConsumerBatchDTO();
+        dto.setStream(batch.stream());
+        dto.setConsumerGroup(batch.consumerGroup());
+        dto.setTabletId(logStore.tabletForStreamId(stream));
+        dto.setOffset(batch.offset());
+        dto.setNextOffset(batch.nextOffset());
+        dto.setLimit(limit);
+        dto.setRecords(batch.records().stream().map(TabletServer::toDto).toList());
+        return dto;
+    }
+
+    public ConsumerBatchDTO commit(String stream, String consumerGroup, long nextOffset) {
+        logStore.commit(stream, consumerGroup, nextOffset);
+        return poll(stream, consumerGroup, 1);
+    }
+
     private static LogRecord toDto(com.logstore.core.api.LogRecord record) {
         LogRecord dto = new LogRecord();
+        dto.setStream(record.stream());
         dto.setOffset(record.offset());
         dto.setTimestamp(record.timestamp());
         dto.setKey(record.key());

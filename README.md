@@ -30,9 +30,9 @@ LogStore sits between them:
 |---|---:|---:|---|
 | Apache Kafka | No | Yes | Large-scale event streaming |
 | Chronicle Queue | Yes | No | Low-latency local persisted queues |
-| LogStore | Yes | Planned | Embedded durable logs before full streaming infrastructure |
+| LogStore | Yes | Static alpha demo | Embedded durable logs with optional static replication |
 
-LogStore is not a Kafka replacement. It is an embedded commit log for applications that want durable, replayable event storage before they need full streaming infrastructure.
+LogStore is not a Kafka replacement. It is an embedded commit log for applications that want durable, replayable event storage, with an experimental static leader/follower replication demo for local alpha testing.
 
 ---
 
@@ -45,6 +45,7 @@ LogStore is not a Kafka replacement. It is an embedded commit log for applicatio
 * Partitioned storage using tablets
 * Binary framed record format with CRC validation
 * Startup recovery from existing log files
+* Persistent consumer cursors for poll/commit workflows
 * Per-tablet persistent single-writer pipeline
 * `FSYNC_EVERY_WRITE`, `BATCHED_FSYNC`, and `ASYNC_FLUSH` durability modes
 * Bounded append queues with block/reject backpressure
@@ -132,6 +133,25 @@ Read records:
 GET /read?stream=orders&offset=0&limit=100
 ```
 
+Poll records for a consumer group:
+
+```http
+GET /consume?stream=orders&consumerGroup=billing-worker&limit=100
+```
+
+Commit the next offset after processing:
+
+```http
+POST /consume/commit
+Content-Type: application/json
+
+{
+  "stream": "orders",
+  "consumerGroup": "billing-worker",
+  "nextOffset": 43
+}
+```
+
 ---
 
 ## Alpha Scope
@@ -139,10 +159,13 @@ GET /read?stream=orders&offset=0&limit=100
 The current alpha covers V0.1 through V0.3:
 
 * V0.1: embedded append/read/replay, framed records, restart recovery, and Spring Boot integration.
-* V0.2: persistent per-tablet writers, batched fsync, async flush mode, sparse offset indexes, bounded queues, and JMH benchmark scaffolding.
-* V0.3: static leader/follower replication demo with quorum acknowledgement and follower catch-up.
+* V0.1+: persistent consumer cursors for MQ-style poll/commit readers.
+* V0.2: persistent per-tablet writers, batched fsync, async flush mode, sparse offset indexes, bounded queues, basic segment rolling, and JMH benchmark scaffolding.
+* V0.3: static leader/follower replication demo with quorum acknowledgement and follower catch-up over gRPC.
 
 Automatic leader election is intentionally out of scope. Kill-leader behavior is unsupported in this alpha and should be handled manually by changing configuration and restarting nodes.
+
+No throughput number is published as a product claim yet. Benchmarks exist so local runs can produce honest numbers with machine, JVM, payload size, partitions, and durability mode.
 
 The protobuf service contract lives at `logstore-server/src/main/proto/logstore.proto`. Peer replication uses gRPC for `Replicate`, `FetchFromOffset`, and `ClusterStatus`; Spring HTTP remains the public/demo surface for client appends, reads, health, and UI calls.
 
@@ -359,7 +382,7 @@ LogStore/
 │       ├── server        # Spring Boot-facing services
 │       ├── replication   # distributed alpha components
 │       └── cluster       # cluster metadata and health
-├── logstore-benchmarks   # benchmark module placeholder
+├── logstore-benchmarks   # JMH embedded benchmarks
 ├── script                # load and stress tests
 ├── ui                    # Next.js operator console
 ├── data/logstore         # local log data
@@ -388,7 +411,6 @@ LogStore/
 * persistent index files
 * log compaction
 * snapshots
-* consumer cursors
 * Java client artifact
 * Spring Boot starter
 * Go/Rust clients over gRPC

@@ -128,6 +128,7 @@ public class ObservabilityController {
         return records.stream()
                 .map(record -> {
                     LogRecord dto = new LogRecord();
+                    dto.setStream(record.stream());
                     dto.setOffset(record.offset());
                     dto.setTimestamp(record.timestamp());
                     dto.setKey(record.key());

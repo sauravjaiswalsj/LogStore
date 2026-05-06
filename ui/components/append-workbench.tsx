@@ -150,6 +150,14 @@ export function AppendWorkbench({ totalTablets }: { totalTablets: number }) {
                 <span>Assigned offset</span>
                 <strong>{receipt.offset}</strong>
               </div>
+              <div className="split-line mono">
+                <span>Replicas</span>
+                <strong>{receipt.persistedReplicas}</strong>
+              </div>
+              <div className="split-line mono">
+                <span>Committed</span>
+                <strong>{receipt.committed ? "yes" : "no"}</strong>
+              </div>
               <div className="split-line">
                 <span className="muted">Recorded</span>
                 <span>{formatDateTime(receipt.createdAt)}</span>

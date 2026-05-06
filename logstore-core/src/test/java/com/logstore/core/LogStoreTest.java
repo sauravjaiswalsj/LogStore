@@ -97,6 +97,32 @@ class LogStoreTest {
     }
 
     @Test
+    void consumerPollCommitAndRestartResumeFromPersistedCursor() {
+        try (LogStore store = openStore()) {
+            store.append("orders", "ORD-1", bytes("one"));
+            store.append("orders", "ORD-2", bytes("two"));
+            store.append("orders", "ORD-3", bytes("three"));
+
+            ConsumerBatch first = store.poll("orders", "billing-worker", 2);
+
+            assertThat(first.offset()).isZero();
+            assertThat(first.nextOffset()).isEqualTo(2L);
+            assertThat(first.records()).extracting(LogRecord::key).containsExactly("ORD-1", "ORD-2");
+
+            store.commit("orders", "billing-worker", first.nextOffset());
+            assertThat(store.committedOffset("orders", "billing-worker")).isEqualTo(2L);
+        }
+
+        try (LogStore reopened = openStore()) {
+            ConsumerBatch second = reopened.poll("orders", "billing-worker", 10);
+
+            assertThat(second.offset()).isEqualTo(2L);
+            assertThat(second.nextOffset()).isEqualTo(3L);
+            assertThat(second.records()).extracting(LogRecord::key).containsExactly("ORD-3");
+        }
+    }
+
+    @Test
     void restartRecoveryResumesAtNextValidOffset() {
         try (LogStore store = openStore()) {
             store.append("orders", "ORD-1", bytes("one"));
